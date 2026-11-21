@@ -4,13 +4,6 @@ PhysDesignBench welcomes contributions across computational physics and physics-
 
 Please propose a task **before** investing time in a full implementation. Maintainers and domain experts can help review the scope and evaluation plan.
 
-## Ways to contribute
-
-- **Propose a task.** [Open a task proposal](https://github.com/Physics-Automation/physdesignbench/issues/new/choose) describing the physical system, design variables, objective, validity constraints, and simulation tools.
-- **Review a task.** Check physical assumptions, constraints, evaluator behavior, and reference designs.
-- **Evaluate an agent.** Follow the [Run guide](https://physdesignbench.com/run), and coordinate with maintainers before proposing results for official rankings.
-- **Report a problem.** Open an issue about faulty evaluators, unclear specifications, or reproducibility.
-
 ## Task contribution process
 
 1. **Propose.** Open an issue with the problem, objective, constraints, simulator, and available reference design. Maintainers assess relevance, evaluability, runtime, and overlap.
@@ -24,6 +17,14 @@ See the [task guidelines](../task-guidelines.md) for acceptance criteria and [re
 ## Task acceptance and benchmark releases
 
 Merging a contribution into the repository does not automatically include it in a benchmark release or leaderboard. Release membership and metric definitions are reviewed separately.
+
+## Other ways to contribute
+
+New tasks are the main contribution, but there are other ways to help:
+
+- **Review a task.** Check physical assumptions, constraints, evaluator behavior, and reference designs.
+- **Evaluate an agent.** Follow the [Run guide](https://physdesignbench.com/run), and coordinate with maintainers before proposing results for official rankings.
+- **Report a problem.** Open an issue about faulty evaluators, unclear specifications, or reproducibility.
 
 ## Questions
 
