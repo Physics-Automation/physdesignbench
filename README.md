@@ -33,6 +33,33 @@ We welcome new design problems, expert reviews, and evaluations of additional ag
 
 Read the [contribution guide](docs/contributing/README.md) for task requirements and the submission process, or [propose a task](https://github.com/Physics-Automation/physdesignbench/issues/new/choose).
 
+## Contributors
+
+We acknowledge the researchers who develop PhysDesignBench, contribute tasks, and review their scientific and engineering validity.
+
+<table>
+  <tr><th colspan="2" align="left">Core Contributors</th></tr>
+  <tr>
+    <td width="50%"><a href="https://ch.linkedin.com/in/ali-momeni-3029b6a3">Ali Momeni</a></td>
+    <td width="50%"><a href="https://babak70.github.io/">Babak Rahmani</a></td>
+  </tr>
+  <tr><th colspan="2" align="left">Advisory</th></tr>
+  <tr>
+    <td><a href="https://qc.ethz.ch/the-center/person-detail.dnorris.html">David Norris</a></td>
+    <td><a href="https://people.epfl.ch/romain.fleury?lang=en">Romain Fleury</a></td>
+  </tr>
+  <tr><th colspan="2" align="left">Task Contributors</th></tr>
+  <tr>
+    <td><a href="https://www.epfl.ch/labs/lwe/page-142114-en-html/">Jiahui Wang</a></td>
+    <td></td>
+  </tr>
+  <tr><th colspan="2" align="left">Scientific Reviewers</th></tr>
+  <tr>
+    <td><a href="https://www.epfl.ch/labs/lwe/page-142114-en-html/">Jiahui Wang</a></td>
+    <td><a href="https://people.epfl.ch/amir.jafargholi?lang=en">Amir Jafargholi</a></td>
+  </tr>
+</table>
+
 ## Citation
 
 If you use PhysDesignBench in your research, please cite:
