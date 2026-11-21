@@ -1,4 +1,4 @@
-<h1 align="center">PhysDesignBench</h1>
+<h1 align="center"><img src="docs/assets/physdesignbench_logo.svg" alt="PhysDesignBench logo" height="110"><br/>PhysDesignBench</h1>
 
 <p align="center"><em>Can AI agents turn engineering specifications into working physical designs?</em></p>
 
