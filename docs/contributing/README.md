@@ -1,6 +1,6 @@
 # Contributing to PhysDesignBench
 
-PhysDesignBench welcomes contributions from researchers and engineers working in photonics, electromagnetics, RF and microwave design, multiphysics, and other simulation-based engineering fields.
+PhysDesignBench welcomes contributions across computational physics and physics-based engineering, including but not limited to photonics, electromagnetics, RF and microwave engineering, mechanics, fluid dynamics, thermal physics, and multiphysics.
 
 Please propose a task **before** investing time in a full implementation. Maintainers and domain experts can help review the scope and evaluation plan.
 
