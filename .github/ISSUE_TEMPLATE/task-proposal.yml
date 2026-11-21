@@ -1,0 +1,69 @@
+name: Task proposal
+description: Propose a new physics-based engineering design or reimplementation task.
+title: "[Task proposal] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the engineering problem before implementing a full task. See [task guidelines](../../docs/task-guidelines.md).
+  - type: textarea
+    id: problem
+    attributes:
+      label: Physical system and engineering problem
+      description: What are we designing or reimplementing, and why is it a meaningful engineering problem?
+      placeholder: Describe the device, operating conditions, and application.
+    validations:
+      required: true
+  - type: dropdown
+    id: family
+    attributes:
+      label: Proposed task family
+      options:
+        - Design
+        - Reimplementation
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: objective
+    attributes:
+      label: Design variables and numerical objective
+      description: Include units, objective direction (minimize/maximize), and what changes in the design.
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Validity checks and engineering targets
+      description: Explain physical, fabrication, and numerical constraints. Separate validity requirements from performance targets.
+    validations:
+      required: true
+  - type: textarea
+    id: simulator
+    attributes:
+      label: Simulation and evaluation environment
+      description: Software, licenses, versions, expected runtime, and required hardware.
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: Reference design or published baseline
+      description: What existing design demonstrates solvability, and how can we reproduce its evaluation?
+    validations:
+      required: true
+  - type: textarea
+    id: budget
+    attributes:
+      label: Proposed budget and practical challenges
+      description: Estimate time/probe requirements and why the task requires more than a single simulation.
+    validations:
+      required: false
+  - type: textarea
+    id: sources
+    attributes:
+      label: References and additional context
+      description: Papers, repositories, licenses, or other relevant material.
+    validations:
+      required: false

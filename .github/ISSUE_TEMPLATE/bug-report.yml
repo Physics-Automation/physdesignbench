@@ -1,0 +1,37 @@
+name: Bug report
+description: Report an evaluator, documentation, or reproducibility issue.
+title: "[Bug] "
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: Area
+      options:
+        - Task specification
+        - Evaluator or validity check
+        - Simulation environment
+        - Scoring or reported result
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: issue
+    attributes:
+      label: What is wrong?
+      description: Include the task ID or URL if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: How to reproduce
+      description: Commands, software versions, and input artifacts where possible. Do not post credentials or private data.
+    validations:
+      required: false
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: false
