@@ -17,7 +17,7 @@ PhysDesignBench evaluates AI agents on physics-based engineering design. Agents 
 
 ## Benchmark
 
-The paper evaluates **26 tasks**: 16 Design tasks and 10 Reimplementation tasks, spanning photonics, electromagnetics, and coupled multiphysics systems.
+The paper evaluates **26 tasks**: 16 Design tasks and 10 Reimplementation tasks.
 
 Agents work with domain-specific simulators under fixed time and evaluation budgets. The benchmark reports the **mean normalized score (MNS)** of final submissions and **engineering pass rate (EPR)**, which measures how often final designs meet the selected performance targets.
 
