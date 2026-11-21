@@ -27,8 +27,6 @@ For task specifications, design examples, and results, see the [website](https:/
 
 See the [run guide](https://physdesignbench.com/run) for environment setup and execution instructions.
 
-Existing task implementations are currently hosted in the [original PICBench repository](https://github.com/MomeniAli/PICBench). They will be migrated here separately; this repository presently hosts the contribution pipeline.
-
 ## Contributing
 
 We welcome new design problems, expert reviews, and evaluations of additional agents.
