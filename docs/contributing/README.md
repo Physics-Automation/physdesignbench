@@ -15,7 +15,7 @@ Please propose a task **before** investing time in a full implementation. Mainta
 
 1. **Propose.** Open an issue with the problem, objective, constraints, simulator, and available reference design. Maintainers assess relevance, evaluability, runtime, and overlap.
 2. **Agree on scope.** Discuss requirements, evaluation boundaries, performance targets, and budget before writing the task.
-3. **Implement.** Use an existing [PICBench task](https://github.com/MomeniAli/PICBench/tree/main/tasks) as a reference while this repository is being populated. Follow the [task format](../task-format.md).
+3. **Implement.** Follow the [task format](../task-format.md) and the agreed evaluation plan.
 4. **Test.** Verify the reference design, validity checks, and scoring. Run at least one end-to-end agent attempt and record the commands, software versions, and results.
 5. **Review.** Open a pull request and fill in the checklist. Maintainers and domain experts review physical correctness, evaluator isolation, and reproducibility.
 
@@ -24,10 +24,6 @@ See the [task guidelines](../task-guidelines.md) for acceptance criteria and [re
 ## Task acceptance and benchmark releases
 
 Merging a contribution into the repository does not automatically include it in a benchmark release or leaderboard. Release membership and metric definitions are reviewed separately.
-
-## Repository transition
-
-The original benchmark tasks currently remain in [MomeniAli/PICBench](https://github.com/MomeniAli/PICBench). They have not been moved into this repository yet. Task migration will be handled separately.
 
 ## Questions
 
