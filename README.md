@@ -37,26 +37,34 @@ Read the [contribution guide](docs/contributing/README.md) for task requirements
 
 We acknowledge the researchers who develop PhysDesignBench, contribute tasks, and review their scientific and engineering validity.
 
-<table>
-  <tr><th colspan="2" align="left">Core Contributors</th></tr>
+<table width="100%">
+  <tr><th colspan="4" align="left"><img src="docs/assets/spacer.svg" width="900" height="0" alt="">Core Contributors</th></tr>
   <tr>
-    <td width="50%"><a href="https://ch.linkedin.com/in/ali-momeni-3029b6a3">Ali Momeni</a></td>
-    <td width="50%"><a href="https://babak70.github.io/">Babak Rahmani</a></td>
+    <td width="25%"><a href="https://ch.linkedin.com/in/ali-momeni-3029b6a3">Ali Momeni</a></td>
+    <td width="25%"><a href="https://babak70.github.io/">Babak Rahmani</a></td>
+    <td width="25%"></td>
+    <td width="25%"></td>
   </tr>
-  <tr><th colspan="2" align="left">Advisory</th></tr>
+  <tr><th colspan="4" align="left"><img src="docs/assets/spacer.svg" width="900" height="0" alt="">Advisory</th></tr>
   <tr>
-    <td><a href="https://qc.ethz.ch/the-center/person-detail.dnorris.html">David Norris</a></td>
-    <td><a href="https://people.epfl.ch/romain.fleury?lang=en">Romain Fleury</a></td>
+    <td width="25%"><a href="https://qc.ethz.ch/the-center/person-detail.dnorris.html">David Norris</a></td>
+    <td width="25%"><a href="https://people.epfl.ch/romain.fleury?lang=en">Romain Fleury</a></td>
+    <td width="25%"></td>
+    <td width="25%"></td>
   </tr>
-  <tr><th colspan="2" align="left">Task Contributors</th></tr>
+  <tr><th colspan="4" align="left"><img src="docs/assets/spacer.svg" width="900" height="0" alt="">Task Contributors</th></tr>
   <tr>
-    <td><a href="https://www.epfl.ch/labs/lwe/page-142114-en-html/">Jiahui Wang</a></td>
-    <td></td>
+    <td width="25%"><a href="https://www.epfl.ch/labs/lwe/page-142114-en-html/">Jiahui Wang</a></td>
+    <td width="25%"></td>
+    <td width="25%"></td>
+    <td width="25%"></td>
   </tr>
-  <tr><th colspan="2" align="left">Scientific Reviewers</th></tr>
+  <tr><th colspan="4" align="left"><img src="docs/assets/spacer.svg" width="900" height="0" alt="">Scientific Reviewers</th></tr>
   <tr>
-    <td><a href="https://www.epfl.ch/labs/lwe/page-142114-en-html/">Jiahui Wang</a></td>
-    <td><a href="https://people.epfl.ch/amir.jafargholi?lang=en">Amir Jafargholi</a></td>
+    <td width="25%"><a href="https://www.epfl.ch/labs/lwe/page-142114-en-html/">Jiahui Wang</a></td>
+    <td width="25%"><a href="https://people.epfl.ch/amir.jafargholi?lang=en">Amir Jafargholi</a></td>
+    <td width="25%"></td>
+    <td width="25%"></td>
   </tr>
 </table>
 
