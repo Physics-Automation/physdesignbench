@@ -43,6 +43,6 @@ If you use PhysDesignBench in your research, please cite:
   title = {PhysDesignBench: Evaluating AI Agents on End-to-End Physics-Based Engineering Design},
   year = {2026},
   url = {https://physdesignbench.com},
-  note = {Preprint; PICBench task collection}
+  note = {Preprint}
 }
 ```
