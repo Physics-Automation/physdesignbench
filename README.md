@@ -47,7 +47,7 @@ We acknowledge the researchers who develop PhysDesignBench, contribute tasks, an
   </tr>
   <tr><th colspan="4" align="left"><img src="docs/assets/spacer.svg" width="900" height="0" alt="">Advisory</th></tr>
   <tr>
-    <td width="25%"><a href="https://qc.ethz.ch/the-center/person-detail.dnorris.html">David Norris</a></td>
+    <td width="25%"><a href="https://scholar.google.com/citations?user=SOi3kXgAAAAJ&hl=en">David Norris</a></td>
     <td width="25%"><a href="https://people.epfl.ch/romain.fleury?lang=en">Romain Fleury</a></td>
     <td width="25%"></td>
     <td width="25%"></td>
