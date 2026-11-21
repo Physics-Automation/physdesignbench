@@ -37,4 +37,4 @@ These guidelines describe the criteria used when evaluating new PhysDesignBench 
 
 A pull request should include the runnable task package, reference design, test commands and outcomes, and any licenses or third-party sources needed to reproduce the evaluation.
 
-For now, see [task-format.md](task-format.md). Existing task examples remain in [PICBench](https://github.com/MomeniAli/PICBench/tree/main/tasks) until migration.
+See the [task format](task-format.md) for package requirements.
