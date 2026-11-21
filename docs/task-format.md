@@ -29,4 +29,4 @@ Some existing tasks separate evaluator implementation into further directories. 
 4. Record the simulator, runtime, version, resource limits, and evaluation commands.
 5. Document performance targets, objective direction, and reference values.
 
-Until representative tasks have been migrated, use an existing [PICBench task folder](https://github.com/MomeniAli/PICBench/tree/main/tasks) as the implementation starting point. This repository's structural CI is intentionally lightweight and is **not** a substitute for running Harbor or validating the physics.
+This repository's structural CI is intentionally lightweight and is **not** a substitute for running Harbor or validating the physics.
