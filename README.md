@@ -37,4 +37,14 @@ Read the [contribution guide](docs/contributing/README.md) for task requirements
 
 ## Citation
 
-If you use PhysDesignBench in your research, please cite the paper. The current [BibTeX entry](https://physdesignbench.com/citation.bib) is maintained on the project website.
+If you use PhysDesignBench in your research, please cite:
+
+```bibtex
+@misc{momeni2026physdesignbench,
+  author = {Ali Momeni},
+  title = {PhysDesignBench: Evaluating AI Agents on End-to-End Physics-Based Engineering Design},
+  year = {2026},
+  url = {https://physdesignbench.com},
+  note = {Preprint; PICBench task collection}
+}
+```
