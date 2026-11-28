@@ -108,7 +108,8 @@ uv run python -m scripts.release validate --manifest .release/image-manifest.jso
   --package .release/package-0.1.0-pilot.1 --output .release/validation.json
 ```
 
-The source task is unchanged. Release copies use `repository@sha256:...` in
+Private credential files in task inputs are rejected before packaging; Git
+metadata and interpreter caches are excluded. The source task is unchanged. Release copies use `repository@sha256:...` in
 Harbor's learner/verifier fields and every configured Compose service, with no
 Compose builds. Evaluator provenance and digest environment bindings are pinned
 together; simulator credentials remain runtime substitutions. Mutable `latest`

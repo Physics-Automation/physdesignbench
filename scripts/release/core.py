@@ -74,6 +74,8 @@ def tree_hash(root):
     for path in sorted(root.rglob('*')):
         if any(p in {'__pycache__', '.pytest_cache', '.git'} for p in path.parts):
             continue
+        if path.name in {'.env','.netrc','.npmrc','id_rsa','id_ed25519'} or path.name.startswith('.env.') and path.name != '.env.example':
+            raise ValueError('Private credential file in task release inputs: '+str(path.relative_to(root)))
         if path.is_symlink():
             raise ValueError(f'Symlink in release input: {path.relative_to(root)}')
         if path.is_file():
@@ -203,7 +205,7 @@ def pin(manifest, destination):
             if tree_hash(source) != entry['task_tree_sha256']:
                 raise ValueError('Task inputs changed after the images were built')
             target = staging/'tasks'/task_id
-            shutil.copytree(source, target, ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
+            shutil.copytree(source, target, ignore=shutil.ignore_patterns('__pycache__','*.pyc','.pytest_cache','.git'))
             config = tomlkit.parse((target/'task.toml').read_text())
             compose_path = target/'environment/docker-compose.yaml'
             compose = yaml.safe_load(compose_path.read_text()) if compose_path.exists() else None

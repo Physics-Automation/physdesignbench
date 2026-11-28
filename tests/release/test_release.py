@@ -71,6 +71,9 @@ def test_context_path_escape_and_symlinks_are_rejected(tmp_path):
     with pytest.raises(ValueError):core.contained(core.ROOT/'tasks', '../README.md')
     (tmp_path/'link').symlink_to(core.ROOT/'README.md')
     with pytest.raises(ValueError):core.tree_hash(tmp_path)
+    (tmp_path/'link').unlink()
+    (tmp_path/'.env').write_text('SYNTHETIC_SECRET=not-a-real-key\n')
+    with pytest.raises(ValueError,match='Private credential file'):core.tree_hash(tmp_path)
 
 
 def test_registry_auth_failure_is_not_treated_as_an_unused_tag(monkeypatch):
