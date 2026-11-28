@@ -57,7 +57,7 @@ jobs:
       - name: Check release logic and task structure
         run: |
           uv run python scripts/check_structure.py
-          uv run pytest tests/release -q
+          uv run pytest tests/release tests/tasks -q
           uv run python -m scripts.release inventory --task "$TASK_ID" --version "$RELEASE_VERSION" --manifest .release/plan.json
       - name: Build existing Dockerfiles (never pushes)
         run: uv run python -m scripts.release build --task "$TASK_ID" --version "$RELEASE_VERSION" --manifest .release/build.json

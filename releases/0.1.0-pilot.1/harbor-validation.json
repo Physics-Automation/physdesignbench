@@ -1,0 +1,53 @@
+{
+  "harbor_cases": [
+    {
+      "case": "invalid",
+      "eval_sha256": "8836566ce220ec6d542b908130a2332eb5b48d76004d88ddfb20e18fc73088d1",
+      "evaluation_transaction": {
+        "evaluation_id": "anisotropic-swg-final-38a4b85802673c28",
+        "evaluator_returncode": 1,
+        "mode": "final",
+        "probe_id": null,
+        "schema_version": 1,
+        "submission_sha256": "38a4b85802673c284801c5379681d7252283f3e0e27ddb7e4a1b9c76fc49dd17",
+        "submission_size": 44
+      },
+      "evidence_directory": ".release/validation-jobs/invalid-08e00668",
+      "gate_pass": false,
+      "invalid_source_executed": false,
+      "objective": null,
+      "probe_interface": "passed",
+      "probe_submission_sha256": "80c0ff5881a157df32ae89077da647a29fe4aaefef947608de95de9488e639c2",
+      "score_eligible": false,
+      "submission_sha256": "38a4b85802673c284801c5379681d7252283f3e0e27ddb7e4a1b9c76fc49dd17"
+    }
+  ],
+  "harbor_tasks": [
+    {
+      "load": "passed",
+      "resource_and_artifact_contract": "unchanged",
+      "task_id": "anisotropic-swg-beamsplitter-v0"
+    }
+  ],
+  "images": [
+    {
+      "image_id": "sha256:e8de0d2f1e06df48aa31675729a9237bc73fcac6b045c8ea85bc4184202cfb74",
+      "pull": "passed",
+      "reference": "docker.io/physicsautomation/physdesignbench@sha256:5636798a97b08b335d3e606e3c5de051d71d7ab69ceafdfc79b9607771308264"
+    },
+    {
+      "image_id": "sha256:8534d40f3b01b8af3e3720fe6e83481a41e65feca3727876c2ccd5c6c716ee0e",
+      "pull": "passed",
+      "reference": "docker.io/physicsautomation/physdesignbench@sha256:bf35b3e02b80b6f639a561865230baae369d005ebaa8866dec5b3b947dca8c66"
+    }
+  ],
+  "release_version": "0.1.0-pilot.1",
+  "retained_public_evidence": [
+    "evidence/invalid-final-eval.json",
+    "evidence/invalid-final-manifest.json",
+    "evidence/invalid-probe.json"
+  ],
+  "schema_version": 1,
+  "scientific_validation": "not_run",
+  "state": "passed"
+}

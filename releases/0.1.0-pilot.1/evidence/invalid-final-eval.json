@@ -1,0 +1,53 @@
+{
+  "design_valid": false,
+  "errors": [
+    "EvaluationError: restricted component build failed: RuntimeError: approved layout import failed before sandbox activation: photonforge: error=missing_root_cloud_credentials; Root-staged credentials are unavailable for the layout license proxy. [HTTP 503 GET http://127.0.0.1:8787/tidy3d/licenses/check?type=PY_LOCAL]"
+  ],
+  "evaluation_transaction": {
+    "evaluation_id": "anisotropic-swg-final-38a4b85802673c28",
+    "evaluator_returncode": 1,
+    "mode": "final",
+    "probe_id": null,
+    "schema_version": 1,
+    "submission_sha256": "38a4b85802673c284801c5379681d7252283f3e0e27ddb7e4a1b9c76fc49dd17",
+    "submission_size": 44
+  },
+  "evaluation_type": "private_evaluator_owned_fdtd_from_gds",
+  "evidence_valid": false,
+  "gate_pass": false,
+  "generated_plot_evidence_valid": false,
+  "learner_code_executed_by_root": false,
+  "learner_reported_metrics_trusted": false,
+  "metrics": [
+    {
+      "components": {
+        "rerun_by_evaluator": false
+      },
+      "direction": "min",
+      "key": "reference_baseline",
+      "label": "Published operating envelope",
+      "role": "diagnostic",
+      "type": "number",
+      "unit": "normalized_penalty",
+      "value": 1.0
+    }
+  ],
+  "objective_value": null,
+  "official_metric": null,
+  "official_score": null,
+  "plots": {},
+  "published_plots": {},
+  "reference_baseline": 1.0,
+  "result_schema_version": 1,
+  "reward": 0.0,
+  "score_eligible": false,
+  "simulation_valid": false,
+  "status": "evaluation_error",
+  "submission_sha256": "38a4b85802673c284801c5379681d7252283f3e0e27ddb7e4a1b9c76fc49dd17",
+  "task_id": "AnisotropicSWGBeamsplitterImplementationOptimization",
+  "task_metric": null,
+  "task_metric_source": null,
+  "task_mode": "implementation_optimization",
+  "task_version": "v4-y-mirror-input-coverage",
+  "valid": false
+}
