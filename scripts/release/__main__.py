@@ -93,6 +93,27 @@ def publish(args):
     print('\n'.join(completed))
 
 
+def resolve(args):
+    """Recover a complete manifest for checked images already in the registry."""
+    manifest = json.loads(args.manifest.read_text());validate_manifest(manifest)
+    if manifest['source_dirty'] or manifest['state'] != 'checked':
+        raise ValueError('Registry recovery requires checked images from a clean source build')
+    if len(manifest.get('image_checks', [])) != len(manifest['images']):
+        raise ValueError('Every image must be inspected before registry recovery')
+    for image in manifest['images']:
+        if tree_hash(ROOT/'tasks'/image['task_id']) != image['task_tree_sha256']:
+            raise ValueError('Task changed since the recorded build')
+        image['digest'] = registry_digest(image['reference'])
+        immutable = image['repository']+'@'+image['digest']
+        execute(['docker','pull','--platform',image['platform'],immutable])
+        actual = json.loads(execute(['docker','image','inspect',immutable],capture=True).stdout)[0]['Id']
+        expected = next(c['image_id'] for c in manifest['image_checks'] if c['image']==image['reference'])
+        if actual != expected:raise ValueError('Published image differs from the inspected image')
+    manifest.update(state='published',manifest_recovered_from_registry=True)
+    validate_manifest(manifest,published=True)
+    write_json(args.output,manifest)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command',required=True)
@@ -103,6 +124,8 @@ def main():
     p=sub.add_parser('check');p.add_argument('--manifest',type=Path,required=True)
     p=sub.add_parser('publish');p.add_argument('--manifest',type=Path,required=True)
     p.add_argument('--execute',action='store_true');p.add_argument('--output',type=Path,default=ROOT/'.release/image-manifest.json')
+    p=sub.add_parser('resolve');p.add_argument('--manifest',type=Path,required=True)
+    p.add_argument('--output',type=Path,default=ROOT/'.release/image-manifest.json')
     p=sub.add_parser('pin');p.add_argument('--manifest',type=Path,required=True)
     p.add_argument('--destination',type=Path,required=True)
     p=sub.add_parser('validate');p.add_argument('--manifest',type=Path,required=True)
@@ -118,6 +141,7 @@ def main():
         elif args.command=='build':build(args)
         elif args.command=='check':check(args)
         elif args.command=='publish':publish(args)
+        elif args.command=='resolve':resolve(args)
         elif args.command=='pin':print(pin(json.loads(args.manifest.read_text()),args.destination))
         elif args.command=='validate':
             from .validation import validate

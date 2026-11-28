@@ -85,4 +85,5 @@ jobs:
           path: |
             .release/*.json
             .release/harbor-task-package.tar.gz
+          include-hidden-files: true
           if-no-files-found: error

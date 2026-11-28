@@ -128,3 +128,22 @@ config_paths=["environment.docker_image"]
     result=tomlkit.parse((target/'task.toml').read_text())
     assert result['environment']['docker_image'].endswith('@sha256:'+'1'*64)
     assert result['environment']['cpus']==1
+
+
+def test_registry_recovery_never_emits_partial_success(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from scripts.release import __main__ as cli
+    data=published();data['state']='checked'
+    data['image_checks']=[{'image':i['reference'],'image_id':'sha256:'+'a'*64} for i in data['images']]
+    source=tmp_path/'build.json';source.write_text(json.dumps(data))
+    output=tmp_path/'complete.json';seen=[]
+    def digest(reference):
+        seen.append(reference)
+        if len(seen)>1:raise RuntimeError('Second image not available')
+        return 'sha256:'+'1'*64
+    class Result:
+        stdout=json.dumps([{'Id':'sha256:'+'a'*64}])
+    monkeypatch.setattr(cli,'registry_digest',digest)
+    monkeypatch.setattr(cli,'execute',lambda *a,**k:Result())
+    with pytest.raises(RuntimeError):cli.resolve(SimpleNamespace(manifest=source,output=output))
+    assert not output.exists()

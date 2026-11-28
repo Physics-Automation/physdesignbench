@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 import shutil
 import sys
+import uuid
 
 import tomlkit
 import yaml
@@ -20,8 +21,8 @@ def sha(path):
 
 def harbor_case(package, *, task_id, case, reference=None):
     """Use Harbor's existing oracle interface with a validation-only solution hook."""
-    directory = ROOT/'.release/validation-cases'/case/task_id
-    if directory.exists():raise ValueError('Validation case already exists; retain its evidence and choose a fresh output directory')
+    case_id = case+'-'+uuid.uuid4().hex[:8]
+    directory = ROOT/'.release/validation-cases'/case_id/task_id
     shutil.copytree(package/'tasks'/task_id,directory)
     solution = directory/'solution'
     if reference:
@@ -37,9 +38,9 @@ def harbor_case(package, *, task_id, case, reference=None):
                   "cat > /workspace/design.py <<'FINAL'\n"+final_source+'FINAL\n')
         final_sha = hashlib.sha256(final_source.encode()).hexdigest()
     (solution/'solve.sh').write_text(script);(solution/'solve.sh').chmod(0o755)
-    jobs = ROOT/'.release/validation-jobs'/case
+    jobs = ROOT/'.release/validation-jobs'/case_id
     execute([sys.executable,'-m','harbor.cli.main','run','--path',directory,'--agent','oracle',
-             '--env','docker','--n-concurrent','1','--max-retries','0','--no-force-build','--jobs-dir',jobs])
+             '--env','docker','--yes','--n-concurrent','1','--max-retries','0','--no-force-build','--jobs-dir',jobs])
     candidates = list(jobs.rglob('artifacts/eval.json'))
     candidates = [p for p in candidates if '/logs/artifacts/' not in str(p)] or candidates
     if not candidates:raise ValueError('Harbor did not collect a final evaluation artifact')
@@ -50,7 +51,7 @@ def harbor_case(package, *, task_id, case, reference=None):
     if final is None:raise ValueError('Final evaluation is not bound to the actual submitted source')
     if final.get('evaluation_transaction',{}).get('mode') != 'final':
         raise ValueError('A probe result was reused as final grading')
-    record = {'case':case,'submission_sha256':final_sha,'eval_sha256':sha(next(p for p,e in zip(candidates,evaluations) if e==final)),
+    record = {'case':case,'evidence_directory':str(jobs.relative_to(ROOT)),'submission_sha256':final_sha,'eval_sha256':sha(next(p for p,e in zip(candidates,evaluations) if e==final)),
               'gate_pass':final.get('gate_pass'),'score_eligible':final.get('score_eligible'),
               'objective':final.get('official_score'),'evaluation_transaction':final.get('evaluation_transaction')}
     if reference:

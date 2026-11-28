@@ -78,6 +78,22 @@ The successful manifest records each task, role, registry, repository, versioned
 tag, immutable registry digest, source commit, Dockerfile, build context and
 platform. It also binds checked local image IDs and exact task-input hashes.
 
+## Recover a manifest after an upload failure
+
+Existing version tags are never overwritten. If registry publication succeeded
+but artifact upload failed, retain the original clean build plan, pull its
+versioned images, and rerun `check` against those images. Then resolve every
+registry digest and compare the pulled image bytes against the inspected IDs:
+
+```sh
+uv run python -m scripts.release check --manifest .release/build.json
+uv run python -m scripts.release resolve --manifest .release/build.json \
+  --output .release/image-manifest.json
+```
+
+This recovery command does not push. Missing images, changed task inputs,
+revision-label mismatches, or mismatched image bytes prevent a complete manifest.
+
 ## Pin release copies and pull
 
 ```sh
@@ -105,7 +121,7 @@ uv run python -m scripts.release validate --manifest .release/image-manifest.jso
 # Supply runtime credentials in the shell, or use uv run --env-file <private-file>.
 uv run python -m scripts.release validate --manifest .release/image-manifest.json \
   --package .release/package-0.1.0-pilot.1 --scientific \
-  --reference tests/pilot/paper_candidate_design.py
+  --reference tests/tasks/anisotropic-swg-beamsplitter-v0/fixtures/paper_candidate_design.py
 ```
 
 The latter may incur simulation charges, subject to the task's existing guards.
