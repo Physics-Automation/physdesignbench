@@ -1,0 +1,153 @@
+{
+  "profile_schema": "picbench.task-profile.v1",
+  "task_slug": "anisotropic-swg-beamsplitter-v0",
+  "task_slug_version": "v0",
+  "result_contract": "picbench.evaluation-result.v1",
+  "private_extension_fields": ["trusted_physics"],
+  "task_id": "AnisotropicSWGBeamsplitterImplementationOptimization",
+  "task_version": "v4-y-mirror-input-coverage",
+  "task_mode": "implementation_optimization",
+  "title": "Anisotropic SWG 2 x 2 Beamsplitter Implementation/Optimization",
+  "public_files": ["design.py", "instruction.md", "harness_contract.md", "task_profile.json", "photonforge_tidy3d.md", "references/"],
+  "submission": {
+    "file": "design.py",
+    "function": "build_submission",
+    "return_type": "photonforge_component",
+    "final_artifact": "final_pic.gds",
+    "one_final_component": true,
+    "learner_metrics_accepted": false,
+    "learner_cloud_evidence_accepted": false
+  },
+  "evidence_schema": {
+    "transaction_manifest_required": true,
+    "manifest": "evaluation_manifest.json",
+    "score_authority": "private_evaluator_simulation_data"
+  },
+  "layout_contract": {
+    "units": "um",
+    "mask_semantics": {
+      "1/0": "silicon_device_layer_core",
+      "2/0": "residual_bottom_air_void_footprint"
+    },
+    "score_layer": [1, 0],
+    "allowed_layers": [[1, 0], [2, 0]],
+    "required_layers": [[1, 0], [2, 0]],
+    "bounds_um": {"x_min": 0.0, "x_max": 30.0, "y_min": -1.9, "y_max": 1.9},
+    "device_length_min_um": 25.0,
+    "device_length_max_um": 30.0,
+    "coordinate_tolerance_um": 0.002,
+    "maximum_vertex_count": 20000,
+    "layers": {
+      "1/0": {
+        "minimum_polygon_count": 100,
+        "maximum_polygon_count": 320,
+        "minimum_bbox_feature_um": 0.009,
+        "minimum_polygon_area_um2": 0.0009,
+        "minimum_total_area_um2": 15.0,
+        "maximum_total_area_um2": 55.0
+      },
+      "2/0": {
+        "minimum_polygon_count": 50,
+        "maximum_polygon_count": 420,
+        "minimum_bbox_feature_um": 0.011,
+        "minimum_polygon_area_um2": 0.0008,
+        "minimum_total_area_um2": 0.5,
+        "maximum_total_area_um2": 40.0
+      }
+    },
+    "port_landings": {
+      "layer": [1, 0],
+      "axis": "x",
+      "centers_um": [-1.0, 1.0],
+      "width_um": 0.5,
+      "width_tolerance_um": 0.02,
+      "center_tolerance_um": 0.02,
+      "minimum_landing_um": 1.0
+    },
+    "y_mirror_symmetry": {
+      "required": true,
+      "axis_y_um": 0.0,
+      "boolean_precision_um": 0.000001,
+      "maximum_symmetric_difference_area_um2": 0.00000001,
+      "applies_to_layers": [[1, 0], [2, 0]]
+    }
+  },
+  "objective": {
+    "name": "worst_band_normalized_beamsplitter_penalty_J",
+    "description": "Worst wavelength from 1250 to 1750 nm of max(excess-loss/1 dB, imbalance/1 dB, phase-error/5 deg) for one simulated input; strict y-mirror mask symmetry makes the other physical input equivalent with the output labels exchanged",
+    "direction": "min",
+    "unit": "normalized_penalty",
+    "wavelength_start_um": 1.250,
+    "wavelength_stop_um": 1.750,
+    "wavelength_step_um": 0.010,
+    "primary_metric_field": "official_score",
+    "components": ["worst_excess_loss_db", "worst_imbalance_db", "worst_phase_error_deg", "worst_wavelength_nm", "reflection_db_1550"]
+  },
+  "design_space": {
+    "learner_controls": [
+      "complete_silicon_core_mask",
+      "inverse_swg_taper_bridge_profile",
+      "swg_bar_width_profile",
+      "mmi_period_count_within_bounds",
+      "mmi_width_within_bounds",
+      "residual_air_void_footprints"
+    ],
+    "evaluator_controls": [
+      "wavelength", "soi_stack", "material_models", "source", "monitors",
+      "mesh", "boundaries", "normalization", "metric_extraction"
+    ]
+  },
+  "references": {"paper": "references/paper.pdf", "parameters": "references/paper_parameters.json"},
+  "baseline": {
+    "source": "published_paper_simulated_500nm_operating_envelope",
+    "reference_value": 1.0,
+    "reference_operating_envelope": {"excess_loss_db_max": 1.0, "imbalance_db_max": 1.0, "phase_error_deg_max": 5.0},
+    "reference_interpretation": "Raw J=1.0 means every 10 nm sample across the paper's 1250-1750 nm simulated bandwidth satisfies the ultra-broadband splitter envelope.",
+    "rerun_by_evaluator": false
+  },
+  "probe": {
+    "available": true,
+    "command": "run_probe",
+    "output_pattern": "/workspace/probe_results_N.json",
+    "canonical_evaluator_parity": true,
+    "response_schema_version": 1,
+    "response_top_level_fields": ["schema_version", "probe_id", "probes_remaining", "submission_sha256", "status", "valid", "gate_pass", "score", "metric", "budget", "diagnostic_artifacts", "best_valid_snapshot", "task_feedback"],
+    "task_feedback": "task-specific bounded diagnostics",
+    "budget_authority": "private_evaluator_sidecar"
+  },
+  "evaluation": {
+    "evaluation_type": "private_evaluator_owned_fdtd_from_gds",
+    "backend": "tidy3d_3d_fdtd",
+    "candidate_runs_per_evaluation": 1,
+    "candidate_subruns_per_evaluation": 1,
+    "max_flexcredit_per_run": 4.0,
+    "input_coverage": {
+      "physical_input_count": 2,
+      "simulated_input_count": 1,
+      "simulated_input_center_y_um": 1.0,
+      "derived_input_center_y_um": -1.0,
+      "derivation": "strict_y_mirror_geometry_with_output_port_exchange",
+      "eligibility_requires_symmetry": true
+    },
+    "official_metric_source": "private_evaluator_simulation_data",
+    "metric_extraction": {
+      "input_monitor": "in_mode",
+      "output_monitors": ["out_3", "out_4"],
+      "direction": "+",
+      "mode_index": 0,
+      "wavelength_grid_um": {"start": 1.250, "stop": 1.750, "step": 0.010},
+      "formula": "For the simulated y=+1 um input and each wavelength: Tj=|aj|^2/|ain|^2; EL=-10log10(T3+T4); penalty=max(max(EL,0)/1, imbalance/1, phase_error/5); metric=max_wavelength(penalty). Eligibility requires both submitted masks to be strictly invariant under y reflection, so the y=-1 um input has the same J with T3/T4 exchanged."
+    },
+    "physical_bounds": {"output_power_sum_min_exclusive": 0.0, "output_power_sum_max_inclusive": 1.0, "numerical_power_tolerance": 0.01}
+  },
+  "metrics": {
+    "primary": {"field": "official_score", "label": "Official worst-band normalized splitter penalty J", "unit": "normalized_penalty", "direction": "min"},
+    "reference": {"field": "reference_baseline", "label": "Published operating envelope", "unit": "normalized_penalty", "direction": "min"},
+    "paper_margin": {"field": "paper_margin", "label": "Paper-envelope margin (positive is better)", "unit": "normalized_penalty", "direction": "max"},
+    "reward": {"field": "reward", "label": "Harbor compatibility reward", "unit": "dimensionless", "direction": "max", "formula": "1/(1+J) for an eligible score; otherwise 0", "official_score": false}
+  },
+  "viewer": {
+    "sections": ["metrics", "beamsplitter_layout", "agent_analysis"],
+    "artifact_hints": {"generated_geometry": "plots/generated_geometry.png", "response": "plots/response.png"}
+  }
+}

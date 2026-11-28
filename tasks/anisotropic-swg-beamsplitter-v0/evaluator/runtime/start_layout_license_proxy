@@ -1,0 +1,44 @@
+#!/bin/bash
+# Start the root-owned learner layout license proxy if this task image provides it.
+set -euo pipefail
+
+PORT="${AGENTICPIC_LAYOUT_LICENSE_PROXY_PORT:-8787}"
+HOST="${AGENTICPIC_LAYOUT_LICENSE_PROXY_HOST:-127.0.0.1}"
+PID_FILE="${AGENTICPIC_LAYOUT_LICENSE_PROXY_PID_FILE:-/var/lib/picbench/anisotropic-swg-beamsplitter-v0/state/layout_license_proxy.pid}"
+LOG_FILE="${AGENTICPIC_LAYOUT_LICENSE_PROXY_LOG_FILE:-/logs/layout_license_proxy.log}"
+PROXY="/usr/local/bin/agenticpic_layout_license_proxy"
+
+if [ ! -x "$PROXY" ]; then
+    exit 0
+fi
+
+if [ -f "$PID_FILE" ]; then
+    PID="$(cat "$PID_FILE" 2>/dev/null || true)"
+    if [ -n "$PID" ] \
+        && kill -0 "$PID" 2>/dev/null \
+        && tr '\0' ' ' <"/proc/$PID/cmdline" 2>/dev/null | grep -q agenticpic_layout_license_proxy; then
+        exit 0
+    fi
+fi
+
+if [ -f /root/.trusted_runtime_env ]; then
+    # shellcheck disable=SC1091
+    . /root/.trusted_runtime_env
+fi
+if [ -n "${TIDY3D_API_KEY:-}" ] && [ -z "${SIMCLOUD_APIKEY:-}" ]; then
+    export SIMCLOUD_APIKEY="$TIDY3D_API_KEY"
+fi
+if [ -n "${SIMCLOUD_APIKEY:-}" ] && [ -z "${TIDY3D_API_KEY:-}" ]; then
+    export TIDY3D_API_KEY="$SIMCLOUD_APIKEY"
+fi
+if [ -z "${TIDY3D_API_KEY:-}" ] && [ -z "${SIMCLOUD_APIKEY:-}" ]; then
+    echo "AgenticPIC layout license proxy not started: missing root cloud credentials" >&2
+    exit 0
+fi
+
+mkdir -p "$(dirname "$PID_FILE")" "$(dirname "$LOG_FILE")"
+touch "$LOG_FILE"
+chmod 600 "$LOG_FILE"
+nohup "$PROXY" --host "$HOST" --port "$PORT" >>"$LOG_FILE" 2>&1 &
+echo "$!" > "$PID_FILE"
+chmod 600 "$PID_FILE"

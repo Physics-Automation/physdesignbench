@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "captured_at_utc": "2026-08-26T12:57:04Z",
+  "task_slug": "anisotropic-swg-beamsplitter-v0",
+  "mode": "upload_and_estimate_only",
+  "tidy3d_version": "2.11.2",
+  "submission_sha256": "dddf9feef2a4461943f2abd931f86631ef7a53761b5b579e551cf82e55044e96",
+  "geometry_digest_policy": "fresh restricted-builder GDS per evaluation; byte digest omitted because GDS header timestamps vary while geometry remains unchanged",
+  "profile_sha256": "1ea7dc965ea4f719f5c87d619077f5bb21c1c30444952fd81fdb48be08a3fb76",
+  "evaluator_image_id": "sha256:688d2179ece65242a37e08b5781cce8487ffda2cb9fedd9612fc6f12b7ae0122",
+  "estimated_flexcredit": 0.8180488090176185,
+  "previous_estimated_flexcredit": 4.816879807779437,
+  "estimate_reduction_fraction": 0.8301703921080946,
+  "max_flexcredit_per_run": 1.1,
+  "minimum_headroom_fraction": 0.2,
+  "computational_grid_points": 33627150,
+  "time_steps": 80218,
+  "work_proxy_grid_points_times_steps": 2697502718700,
+  "provider_task_uploaded": true,
+  "cloud_start_attempted": false,
+  "cloud_task_started": false
+}

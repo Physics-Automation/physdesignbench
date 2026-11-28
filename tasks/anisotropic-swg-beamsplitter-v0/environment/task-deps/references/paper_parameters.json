@@ -1,0 +1,59 @@
+{
+  "paper": {
+    "title": "Ultra-broadband nanophotonic beamsplitter using an anisotropic sub-wavelength metamaterial",
+    "authors": ["Robert Halir", "Pavel Cheben", "Jose Manuel Luque-Gonzalez", "Jose Dario Sarmiento-Merenguel", "Jens H. Schmid", "Gonzalo Wanguemert-Perez", "Dan-Xia Xu", "Shurui Wang", "Alejandro Ortega-Monux", "Inigo Molina-Fernandez"],
+    "doi": "10.1002/lpor.201600213",
+    "journal": "Laser & Photonics Reviews",
+    "volume": 10,
+    "issue": 6,
+    "pages": "1039-1046",
+    "year": 2016,
+    "local_pdf": "paper.pdf"
+  },
+  "device": "Anisotropic sub-wavelength-grating 2 x 2 MMI beamsplitter",
+  "paper_geometry_um": {
+    "si_thickness": 0.22,
+    "mmi_width": 3.25,
+    "mmi_periods": 74,
+    "input_width": 0.50,
+    "access_width": 1.70,
+    "taper_length_broadband": 5.7,
+    "taper_periods_broadband": 30,
+    "separation": 0.30,
+    "swg_period": 0.190,
+    "duty_cycle": 0.50,
+    "residual_air_void_area_nm2": 5700,
+    "residual_air_void_rectangle_nm": [95, 60],
+    "fabrication_tolerance_duty_cycle_pct": 7,
+    "fabrication_tolerance_mmi_width_nm": 50
+  },
+  "stack_um": {"si_device_layer": 0.22, "sio2_top_cladding": "PECVD SiO2", "sio2_box": "standard SOI BOX"},
+  "source": {"input_port": "port 1", "mode": "fundamental TE"},
+  "output_monitors": {"out_3": "output port 3 fundamental TE", "out_4": "output port 4 fundamental TE"},
+  "benchmark_input_coverage": {
+    "physical_inputs": ["y=-1.0 um", "y=+1.0 um"],
+    "simulated_input": "y=+1.0 um",
+    "derived_input": "y=-1.0 um",
+    "derivation": "Both learner-owned mask unions must be strictly invariant under reflection about y=0; the derived input therefore has the same J with output ports 3 and 4 exchanged."
+  },
+  "paper_results": {
+    "simulated_broadband_bandwidth_nm": 500,
+    "simulated_broadband_wavelength_range_nm": [1250, 1750],
+    "benchmark_wavelength_step_nm": 10,
+    "simulated_broadband_criteria": {"excess_loss_db_max": 1.0, "imbalance_db_max": 1.0, "phase_error_deg_max": 5.0},
+    "measured_bandwidth_nm": 300,
+    "measured_wavelength_range_nm": [1375, 1700],
+    "conventional_mmi_simulated_bandwidth_nm": 200,
+    "beat_length_um_at_1500nm_broadband": 10,
+    "beat_length_um_at_1500nm_conventional": 28
+  },
+  "official_score_mapping": {
+    "formula": "J=max over sampled wavelengths of max(excess_loss_db/1 dB, imbalance_db/1 dB, phase_error_deg/5 deg)",
+    "direction": "min",
+    "paper_envelope_reference_value": 1.0
+  },
+  "paper_limitations": [
+    "The paper does not tabulate an exact excess-loss value at 1550 nm.",
+    "The reported residual air void has a kite-like cross section; its area is reported explicitly and the narrow-gap rectangular simplification is discussed by the authors."
+  ]
+}

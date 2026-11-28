@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+"""Freeze the one learner submission that Harbor transfers to the verifier.
+
+This is deliberately generic transport code.  It contains no task rules and
+does not execute or import learner-authored Python.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import stat
+import sys
+import uuid
+from pathlib import Path
+
+SOURCE = Path("/workspace/design.py")
+DESTINATION_DIR = Path("/submission")
+DESTINATION_NAME = "design.py"
+MAX_SUBMISSION_BYTES = 1024 * 1024
+
+
+class SubmissionExportError(RuntimeError):
+    pass
+
+
+def _read_stable_regular_file(path: Path) -> bytes:
+    flags = os.O_RDONLY | os.O_CLOEXEC | os.O_NONBLOCK
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise SubmissionExportError(f"could not open submission safely: {exc}") from exc
+
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode):
+            raise SubmissionExportError("submission must be a regular file")
+        if before.st_size <= 0:
+            raise SubmissionExportError("submission is empty")
+        if before.st_size > MAX_SUBMISSION_BYTES:
+            raise SubmissionExportError(f"submission exceeds {MAX_SUBMISSION_BYTES} byte limit")
+
+        chunks: list[bytes] = []
+        remaining = before.st_size
+        while remaining:
+            chunk = os.read(descriptor, min(remaining, 64 * 1024))
+            if not chunk:
+                raise SubmissionExportError("submission changed while being frozen")
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        if os.read(descriptor, 1):
+            raise SubmissionExportError("submission grew while being frozen")
+
+        after = os.fstat(descriptor)
+        stable_fields = (
+            "st_dev",
+            "st_ino",
+            "st_mode",
+            "st_uid",
+            "st_gid",
+            "st_size",
+            "st_mtime_ns",
+            "st_ctime_ns",
+        )
+        if any(getattr(before, field) != getattr(after, field) for field in stable_fields):
+            raise SubmissionExportError("submission changed while being frozen")
+        return b"".join(chunks)
+    finally:
+        os.close(descriptor)
+
+
+def _open_destination_directory() -> int:
+    flags = os.O_RDONLY | os.O_CLOEXEC
+    if hasattr(os, "O_DIRECTORY"):
+        flags |= os.O_DIRECTORY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(DESTINATION_DIR, flags)
+    except OSError as exc:
+        raise SubmissionExportError(f"could not open trusted submission directory: {exc}") from exc
+
+    metadata = os.fstat(descriptor)
+    if not stat.S_ISDIR(metadata.st_mode) or metadata.st_uid != 0:
+        os.close(descriptor)
+        raise SubmissionExportError("trusted submission directory has unsafe ownership")
+    if metadata.st_mode & 0o022:
+        os.close(descriptor)
+        raise SubmissionExportError("trusted submission directory is group/world writable")
+    return descriptor
+
+
+def _atomic_write_submission(directory_fd: int, payload: bytes) -> None:
+    temporary_name = f".{DESTINATION_NAME}.tmp-{uuid.uuid4().hex}"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+
+    descriptor = os.open(temporary_name, flags, 0o400, dir_fd=directory_fd)
+    try:
+        view = memoryview(payload)
+        while view:
+            written = os.write(descriptor, view)
+            if written <= 0:
+                raise SubmissionExportError("could not write frozen submission")
+            view = view[written:]
+        os.fsync(descriptor)
+        os.fchmod(descriptor, 0o444)
+    finally:
+        os.close(descriptor)
+
+    try:
+        os.replace(
+            temporary_name,
+            DESTINATION_NAME,
+            src_dir_fd=directory_fd,
+            dst_dir_fd=directory_fd,
+        )
+        os.fsync(directory_fd)
+    except Exception:
+        try:
+            os.unlink(temporary_name, dir_fd=directory_fd)
+        except OSError:
+            pass
+        raise
+
+
+def main() -> int:
+    if hasattr(os, "geteuid") and os.geteuid() != 0:
+        print("submission export must run as root", file=sys.stderr)
+        return 77
+
+    try:
+        payload = _read_stable_regular_file(SOURCE)
+        directory_fd = _open_destination_directory()
+        try:
+            _atomic_write_submission(directory_fd, payload)
+        finally:
+            os.close(directory_fd)
+    except SubmissionExportError as exc:
+        print(f"submission export failed: {exc}", file=sys.stderr)
+        return 1
+
+    print(
+        json.dumps(
+            {
+                "source": str(SOURCE),
+                "destination": str(DESTINATION_DIR / DESTINATION_NAME),
+                "size": len(payload),
+                "sha256": hashlib.sha256(payload).hexdigest(),
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
