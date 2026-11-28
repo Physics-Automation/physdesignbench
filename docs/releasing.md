@@ -3,13 +3,18 @@
 This pilot distributes **one Reimplementation task** using the existing Harbor
 architecture. It does not publish a full benchmark dataset. See the
 [pilot audit](releases/pilot-audit.md) for identification, images, trust boundaries
-and scientific-validation limits.
+and scientific-validation limits. The [validation report](releases/pilot-validation.md)
+records the published pilot and remaining certification work.
 
 ## Install
 
 Requires Python 3.12+, uv, Git, Docker with Buildx and a `linux/amd64` Linux
 container runtime. The original restricted builder needs nested user namespaces;
 validate this on the intended host rather than weakening its sandbox.
+Some Docker 29 containerd stores omit foreign-platform layers when exporting
+pulled images ([upstream issue](https://github.com/moby/moby/issues/52193)).
+The audit fails closed on incomplete exports. Use a fixed Docker engine or
+its classic image store; the pilot’s dedicated local VM uses the classic store.
 
 ```sh
 uv sync --locked --extra dev
@@ -128,7 +133,10 @@ The latter may incur simulation charges, subject to the task's existing guards.
 It is not run automatically by the image publisher. Each validation case uses
 Harbor's standard oracle agent in a disposable task copy. The distributed
 `solution/solve.sh` is preserved. Final evaluation must be bound to the final
-source hash, not a probe result. To compare against a verified current objective,
+source hash, not a probe result. Without simulator credentials, lifecycle checks
+can reach a source-bound final rejection at the licence stage; this is not
+scientific validation. The scientific command requires credentials and confirms
+that the deliberate invalid source executed before attempting a paid reference. To compare against a verified current objective,
 add `--expected-j <value>`; do not substitute an old-profile certificate.
 
 For an ordinary experiment using a released package:

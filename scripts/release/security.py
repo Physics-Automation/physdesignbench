@@ -59,6 +59,9 @@ def inspect_image(image):
         execute(['docker','image','save','-o',archive_path,ref])
         with tarfile.open(archive_path) as archive:
             manifest = json.load(archive.extractfile('manifest.json'))
+            missing = [layer for layer in manifest[0]['Layers'] if layer not in archive.getnames()]
+            if missing:
+                raise RuntimeError('Docker exported an incomplete image archive; use an updated engine or its classic image store, then repeat the audit')
             for layer in manifest[0]['Layers']:
                 with tarfile.open(fileobj=archive.extractfile(layer), mode='r|*') as contents:
                     for member in contents:

@@ -28,6 +28,18 @@ def execute(args, *, capture=False, check=True, env=None):
     return result
 
 
+def matching_image_ids(actual, expected, image):
+    """Docker stores expose either config or manifest IDs for the same image."""
+    if actual == expected:
+        return True
+    ref = image['repository']+'@'+image['digest']
+    descriptor = json.loads(execute(['docker','buildx','imagetools','inspect',ref,'--raw'],capture=True).stdout)
+    config_digest = descriptor.get('config',{}).get('digest')
+    if not DIGEST.fullmatch(config_digest or ''):
+        return False
+    return {actual, expected} <= {image['digest'], config_digest}
+
+
 def write_json(path, value):
     path = Path(path);path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix+'.tmp')

@@ -95,7 +95,7 @@ with its Apache-2.0 licence. The upstream base is
 `3e6cf0b4ee76aa2574d81586e7a17220823b42bd`. This preserves separate-verifier
 collection, image-template resolution, resource/security settings and process
 lifecycle fixes. Only the small benchmark-clock helper required by that runtime
-is included from the task runner integration. The viewer, historical run stores,
+is included from the task runner integration. The project-specific viewer, historical run stores,
 agent campaign runners and other 25 tasks are not migrated.
 
 ## Release infrastructure reference
@@ -112,3 +112,8 @@ The reference inspected was commit `5411da4d8aed9e522b8ebdf440bfcb1ca5b25072`:
 This pilot deliberately does not publish a Harbor Hub task collection or dataset.
 A future versioned dataset can use `physics-automation/physdesignbench` after
 individual tasks and dataset membership have been reviewed.
+
+## Executed pilot checks
+
+See [pilot-validation.md](pilot-validation.md) for the published image references,
+executed checks, retained evidence and remaining scientific-validation blocker.

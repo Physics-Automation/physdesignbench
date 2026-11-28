@@ -1,0 +1,9 @@
+{
+  "harbor_cases": [],
+  "harbor_tasks": [],
+  "images": [],
+  "release_version": "0.1.0-pilot.1",
+  "schema_version": 1,
+  "scientific_validation": "blocked_missing_runtime_credentials",
+  "state": "blocked"
+}

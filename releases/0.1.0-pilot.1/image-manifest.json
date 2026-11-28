@@ -1,0 +1,126 @@
+{
+  "image_checks": [
+    {
+      "credential_scan": "passed",
+      "forbidden_paths": "passed",
+      "image": "docker.io/physicsautomation/physdesignbench:anisotropic-swg-beamsplitter-v0-learner-v0.1.0-pilot.1",
+      "image_id": "sha256:e8de0d2f1e06df48aa31675729a9237bc73fcac6b045c8ea85bc4184202cfb74",
+      "layer_files_inspected": 28334,
+      "offline_smoke": "passed"
+    },
+    {
+      "credential_scan": "passed",
+      "forbidden_paths": "passed",
+      "image": "docker.io/physicsautomation/physdesignbench:anisotropic-swg-beamsplitter-v0-evaluator-v0.1.0-pilot.1",
+      "image_id": "sha256:8534d40f3b01b8af3e3720fe6e83481a41e65feca3727876c2ccd5c6c716ee0e",
+      "layer_files_inspected": 24915,
+      "offline_smoke": "passed"
+    }
+  ],
+  "images": [
+    {
+      "build_context": "environment",
+      "compose_services": [
+        "main"
+      ],
+      "config_paths": [
+        "environment.docker_image"
+      ],
+      "context": "environment",
+      "digest": "sha256:5636798a97b08b335d3e606e3c5de051d71d7ab69ceafdfc79b9607771308264",
+      "dockerfile": "environment/Dockerfile",
+      "forbidden_paths": [
+        "opt/picbench/evaluator",
+        "solution",
+        "workspace/solution",
+        "root/.trusted_runtime_env"
+      ],
+      "image_role": "learner",
+      "image_variable": "PICBENCH_ANISOTROPIC_SWG_BEAMSPLITTER_LEARNER_IMAGE",
+      "input_hash_kind": "learner",
+      "input_hash_label": "org.picbench.learner-build-inputs-sha256",
+      "platform": "linux/amd64",
+      "reference": "docker.io/physicsautomation/physdesignbench:anisotropic-swg-beamsplitter-v0-learner-v0.1.0-pilot.1",
+      "registry": "docker.io",
+      "release_version": "0.1.0-pilot.1",
+      "repository": "docker.io/physicsautomation/physdesignbench",
+      "smoke_commands": [
+        [
+          "python",
+          "-c",
+          "import gdstk,tidy3d,scipy,importlib.util; assert importlib.util.find_spec('photonforge'); print('Offline imports and PhotonForge package discovery passed')"
+        ],
+        [
+          "test",
+          "-x",
+          "/usr/local/bin/run_probe"
+        ]
+      ],
+      "source_commit": "8c3afbefe4bbfaf2c11a862a7fb0185a16524777",
+      "tag": "anisotropic-swg-beamsplitter-v0-learner-v0.1.0-pilot.1",
+      "task_id": "anisotropic-swg-beamsplitter-v0",
+      "task_tree_sha256": "ecddf609ea3b1aa99c06d3d20873f686f682d56db5c6caabcec78279bc2f4806"
+    },
+    {
+      "build_context": ".",
+      "compose_services": [
+        "evaluator"
+      ],
+      "config_paths": [
+        "verifier.environment.docker_image"
+      ],
+      "context": ".",
+      "digest": "sha256:bf35b3e02b80b6f639a561865230baae369d005ebaa8866dec5b3b947dca8c66",
+      "digest_variable": "PICBENCH_ANISOTROPIC_SWG_BEAMSPLITTER_EVALUATOR_IMAGE_DIGEST",
+      "dockerfile": "evaluator/Dockerfile",
+      "forbidden_paths": [
+        "solution",
+        "workspace/design.py",
+        "root/.trusted_runtime_env"
+      ],
+      "image_role": "evaluator",
+      "image_variable": "PICBENCH_ANISOTROPIC_SWG_BEAMSPLITTER_EVALUATOR_IMAGE",
+      "input_hash_kind": "evaluator",
+      "input_hash_label": "org.picbench.evaluator-build-inputs-sha256",
+      "platform": "linux/amd64",
+      "reference": "docker.io/physicsautomation/physdesignbench:anisotropic-swg-beamsplitter-v0-evaluator-v0.1.0-pilot.1",
+      "registry": "docker.io",
+      "release_version": "0.1.0-pilot.1",
+      "repository": "docker.io/physicsautomation/physdesignbench",
+      "smoke_commands": [
+        [
+          "python",
+          "-c",
+          "import gdstk,tidy3d,scipy,importlib.util; assert importlib.util.find_spec('photonforge'); print('Offline imports and PhotonForge package discovery passed')"
+        ],
+        [
+          "test",
+          "-x",
+          "/opt/picbench/evaluator/bin/evaluate"
+        ],
+        [
+          "test",
+          "-x",
+          "/tests/test.sh"
+        ]
+      ],
+      "source_commit": "8c3afbefe4bbfaf2c11a862a7fb0185a16524777",
+      "tag": "anisotropic-swg-beamsplitter-v0-evaluator-v0.1.0-pilot.1",
+      "task_id": "anisotropic-swg-beamsplitter-v0",
+      "task_tree_sha256": "ecddf609ea3b1aa99c06d3d20873f686f682d56db5c6caabcec78279bc2f4806"
+    }
+  ],
+  "manifest_recovered_from_registry": true,
+  "release_version": "0.1.0-pilot.1",
+  "schema_version": 1,
+  "scientific_validation": "not_run",
+  "source_commit": "8c3afbefe4bbfaf2c11a862a7fb0185a16524777",
+  "source_dirty": false,
+  "state": "published",
+  "tasks": [
+    {
+      "task_id": "anisotropic-swg-beamsplitter-v0",
+      "task_tree_sha256": "ecddf609ea3b1aa99c06d3d20873f686f682d56db5c6caabcec78279bc2f4806"
+    }
+  ]
+}

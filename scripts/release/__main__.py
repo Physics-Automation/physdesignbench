@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 import sys
 
-from .core import ROOT, DIGEST, SOURCE_URL, contained, execute, inventory, pin, tree_hash, validate_manifest, write_json
+from .core import ROOT, DIGEST, SOURCE_URL, contained, execute, inventory, matching_image_ids, pin, tree_hash, validate_manifest, write_json
 from .security import inspect_image
 
 
@@ -82,7 +82,7 @@ def publish(args):
             execute(['docker','pull','--platform',image['platform'],immutable])
             info = json.loads(execute(['docker','image','inspect',immutable],capture=True).stdout)[0]
             original = next(c['image_id'] for c in manifest['image_checks'] if c['image']==image['reference'])
-            if info['Id'] != original:raise ValueError('Pulled image differs from inspected image')
+            if not matching_image_ids(info['Id'],original,image):raise ValueError('Pulled image differs from inspected image')
             completed.append(immutable)
     except Exception:
         write_json(args.manifest.with_name('publication-incomplete.json'),
@@ -108,7 +108,7 @@ def resolve(args):
         execute(['docker','pull','--platform',image['platform'],immutable])
         actual = json.loads(execute(['docker','image','inspect',immutable],capture=True).stdout)[0]['Id']
         expected = next(c['image_id'] for c in manifest['image_checks'] if c['image']==image['reference'])
-        if actual != expected:raise ValueError('Published image differs from the inspected image')
+        if not matching_image_ids(actual,expected,image):raise ValueError('Published image differs from the inspected image')
     manifest.update(state='published',manifest_recovered_from_registry=True)
     validate_manifest(manifest,published=True)
     write_json(args.output,manifest)

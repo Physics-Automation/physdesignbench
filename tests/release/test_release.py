@@ -147,3 +147,29 @@ def test_registry_recovery_never_emits_partial_success(tmp_path, monkeypatch):
     monkeypatch.setattr(cli,'execute',lambda *a,**k:Result())
     with pytest.raises(RuntimeError):cli.resolve(SimpleNamespace(manifest=source,output=output))
     assert not output.exists()
+
+
+def test_store_specific_ids_must_identify_the_same_published_manifest(monkeypatch):
+    image={'repository':core.REPOSITORY,'digest':'sha256:'+'1'*64}
+    config='sha256:'+'2'*64
+    class Result:
+        stdout=json.dumps({'config':{'digest':config}})
+    monkeypatch.setattr(core,'execute',lambda *a,**k:Result())
+    assert core.matching_image_ids(image['digest'],config,image)
+    assert core.matching_image_ids(config,image['digest'],image)
+    assert not core.matching_image_ids('sha256:'+'3'*64,config,image)
+
+
+def test_scientific_preflight_without_credentials_starts_no_provider_job(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from scripts.release import validation
+    source=tmp_path/'manifest.json';source.write_text(json.dumps(published()))
+    reference=tmp_path/'reference.py';reference.write_text('raise RuntimeError()\n')
+    output=tmp_path/'validation.json'
+    monkeypatch.delenv('TIDY3D_API_KEY',raising=False)
+    monkeypatch.delenv('SIMCLOUD_APIKEY',raising=False)
+    def no_execution(*args,**kwargs):raise AssertionError('A command ran before credential preflight')
+    monkeypatch.setattr(validation,'execute',no_execution)
+    args=SimpleNamespace(manifest=source,package=tmp_path,scientific=True,reference=reference,output=output)
+    with pytest.raises(ValueError,match='no provider evaluation was started'):validation.validate(args)
+    assert json.loads(output.read_text())['scientific_validation']=='blocked_missing_runtime_credentials'

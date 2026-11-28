@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import shutil
 import sys
@@ -12,7 +13,7 @@ import uuid
 import tomlkit
 import yaml
 
-from .core import ROOT, execute, lookup, validate_manifest, write_json
+from .core import ROOT, execute, lookup, matching_image_ids, validate_manifest, write_json
 
 
 def sha(path):
@@ -74,6 +75,7 @@ def harbor_case(package, *, task_id, case, reference=None):
             raise ValueError('Probe feedback is not bound to the probe submission')
         if feedback.get('valid') is not False or feedback.get('gate_pass') is not False:
             raise ValueError('Invalid probe was accepted')
+        record['invalid_source_executed'] = any('release_final_invalid' in str(error) for error in final.get('errors',[]))
         record['probe_interface'] = 'passed'
         record['probe_submission_sha256'] = expected_probe_sha
     return record
@@ -90,13 +92,18 @@ def validate(args):
     report = {'schema_version':1,'release_version':manifest['release_version'],'images':[],
               'harbor_tasks':[],'harbor_cases':[],'scientific_validation':'not_run'}
     write_json(args.output,{**report,'state':'incomplete'})
+    if args.scientific and not any(os.environ.get(key) for key in ['TIDY3D_API_KEY','SIMCLOUD_APIKEY']):
+        report['scientific_validation'] = 'blocked_missing_runtime_credentials'
+        write_json(args.output,{**report,'state':'blocked'})
+        raise ValueError('Scientific validation requires evaluator runtime TIDY3D_API_KEY or SIMCLOUD_APIKEY; no provider evaluation was started')
     for image in manifest['images']:
         ref = image['repository']+'@'+image['digest']
         execute(['docker','pull','--platform',image['platform'],ref])
         inspected = json.loads(execute(['docker','image','inspect',ref],capture=True).stdout)[0]
         expected = next(c['image_id'] for c in manifest['image_checks'] if c['image']==image['reference'])
-        if inspected['Id'] != expected:raise ValueError('Published image bytes differ from inspected build')
+        if not matching_image_ids(inspected['Id'],expected,image):raise ValueError('Published image bytes differ from inspected build')
         report['images'].append({'reference':ref,'pull':'passed','image_id':expected})
+    write_json(args.output,{**report,'state':'incomplete'})
     for task in manifest['tasks']:
         task_id=task['task_id'];directory=package/'tasks'/task_id
         config=tomlkit.parse((directory/'task.toml').read_text()).unwrap()
@@ -120,8 +127,13 @@ def validate(args):
                 continue
             if lookup(config,key)!=expected:raise ValueError('Release changed Harbor semantics: '+key)
         report['harbor_tasks'].append({'task_id':task_id,'load':'passed','resource_and_artifact_contract':'unchanged'})
+        write_json(args.output,{**report,'state':'incomplete'})
         if args.harbor or args.scientific:
-            report['harbor_cases'].append(harbor_case(package,task_id=task_id,case='invalid'))
+            invalid_result = harbor_case(package,task_id=task_id,case='invalid')
+            report['harbor_cases'].append(invalid_result)
+            write_json(args.output,{**report,'state':'incomplete'})
+            if args.scientific and not invalid_result['invalid_source_executed']:
+                raise ValueError('Invalid-source scientific rejection was not confirmed; inspect runtime or sandbox errors before a paid reference solve')
         if args.scientific:
             result=harbor_case(package,task_id=task_id,case='reference',reference=args.reference.resolve())
             if args.expected_j is not None and not math.isclose(result['objective'],args.expected_j,rel_tol=1e-6,abs_tol=1e-9):
