@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "captured_at_utc": "2026-08-26T16:02:09Z",
+  "task_slug": "anisotropic-swg-beamsplitter-v0",
+  "task_version": "v1-two-image",
+  "mode": "upload_and_estimate_only",
+  "tidy3d_version": "2.11.2",
+  "submission_sha256": "dddf9feef2a4461943f2abd931f86631ef7a53761b5b579e551cf82e55044e96",
+  "gds_sha256": "92fc9426206e9ffab3992bdff9cb1c0c0d9ebb026624f526a4a261417534106e",
+  "gds_digest_scope": "fresh restricted-builder geometry smoke immediately preceding estimate; binary GDS headers may differ between builds",
+  "profile_sha256": "5def7049ccf33312f4ea2815827584f3bff7604ef45aef0fbb593b4ab8cd8bbe",
+  "evaluator_image_id": "sha256:177d38da0693897e64b3d3a424f8ced4a7e7d5d5b4c7a4f537d53307f7bc2f65",
+  "estimated_flexcredit": 0.864842735300946,
+  "max_flexcredit_per_run": 1.1,
+  "minimum_headroom_fraction": 0.2,
+  "previous_contract_estimated_flexcredit": 0.8180488090176185,
+  "simulation_contract": {"wavelength_range_nm": [1375, 1700], "wavelength_step_nm": 25, "monitor_frequency_count": 14, "candidate_runs": 1},
+  "local_simulation_construction_smoke_passed": true,
+  "provider_task_uploaded": true,
+  "cloud_start_attempted": false,
+  "cloud_task_started": false
+}

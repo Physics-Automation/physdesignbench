@@ -1,0 +1,37 @@
+#!/bin/sh
+# Print learner-visible benchmark-owned wall-clock status for this task.
+set -eu
+
+status_dir=/run/picbench
+status_file="${status_dir}/benchmark-status.json"
+. /usr/local/libexec/picbench_benchmark_status_lib
+
+if picbench_status_file_is_trusted; then
+    timing=$(picbench_timing_json)
+    jq --argjson timing "$timing" \
+      '{
+        schema_version: (.schema_version // 1),
+        generated_at: $timing.generated_at,
+        source: (.source // "benchmark_status"),
+        timing: $timing
+      }' \
+      "$status_file"
+    exit 0
+fi
+
+jq -n \
+  --arg generated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  '
+  {
+    schema_version: 1,
+    generated_at: $generated_at,
+    source: "benchmark_status_unavailable",
+    timing: {
+      generated_at: $generated_at,
+      started_at_utc: null,
+      deadline_at_utc: null,
+      time_limit_seconds: null,
+      elapsed_seconds: null,
+      remaining_seconds: null
+    }
+  }'

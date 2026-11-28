@@ -1,0 +1,298 @@
+#!/bin/sh
+# Unprivileged client for the private anisotropic-SWG beamsplitter probe broker.
+set -eu
+
+if [ "$#" -ne 0 ]; then
+    echo '{"error":"unsupported probe arguments; use: run_probe"}' >&2
+    exit 2
+fi
+
+submission=/workspace/design.py
+endpoint=${PICBENCH_PROBE_ENDPOINT:-http://evaluator:8788/v1/probe}
+
+if [ ! -f "$submission" ] || [ -L "$submission" ]; then
+    echo '{"error":"missing or unsafe /workspace/design.py"}' >&2
+    exit 1
+fi
+
+temporary=$(mktemp /workspace/.probe-result.XXXXXX)
+cleanup() { rm -f -- "$temporary" "${normalized:-}" "${submission_snapshot:-}"; }
+trap cleanup EXIT HUP INT TERM
+
+# Freeze exactly the source bytes that will be sent and later bind the response
+# to this immutable snapshot, rather than to a live, mutable design.py.
+submission_snapshot=$(mktemp /workspace/.probe-submission.XXXXXX)
+cp -- "$submission" "$submission_snapshot"
+chmod 600 "$submission_snapshot"
+submission_size=$(wc -c < "$submission_snapshot")
+if [ "$submission_size" -le 0 ] || [ "$submission_size" -gt 1048576 ]; then
+    echo '{"error":"submission size must be in [1, 1048576] bytes"}' >&2
+    exit 1
+fi
+
+curl \
+    --fail-with-body \
+    --silent \
+    --show-error \
+    --connect-timeout 10 \
+    --max-time 1560 \
+    --max-filesize 65536 \
+    --header 'Content-Type: text/x-python' \
+    --data-binary "@$submission_snapshot" \
+    --output "$temporary" \
+    "$endpoint"
+
+probe_id=$(jq -er '.probe_id | select(type == "number" and . >= 1 and floor == .)' "$temporary")
+destination="/workspace/probe_results_${probe_id}.json"
+if [ -e "$destination" ] || [ -L "$destination" ]; then
+    echo '{"error":"probe service returned a duplicate probe id"}' >&2
+    exit 1
+fi
+normalized=$(mktemp /workspace/.probe-normalized.XXXXXX)
+python3 - "$temporary" "$normalized" "$submission_snapshot" <<'PY'
+import hashlib
+import json
+import math
+import re
+import sys
+from pathlib import Path
+
+source, destination, submission = sys.argv[1:4]
+
+
+def reject(reason):
+    raise SystemExit(f"invalid canonical probe envelope: {reason}")
+
+
+def reject_constant(value):
+    raise ValueError(f"non-finite JSON constant {value}")
+
+
+source_path = Path(source)
+submission_path = Path(submission)
+try:
+    response_bytes = source_path.read_bytes()
+    if not response_bytes or len(response_bytes) > 65536:
+        raise ValueError("response size must be in [1, 65536] bytes")
+    payload = json.loads(
+        response_bytes.decode("utf-8"), parse_constant=reject_constant
+    )
+    if not submission_path.is_file() or submission_path.is_symlink():
+        raise ValueError("submission is no longer a safe regular file")
+    expected_submission_sha256 = hashlib.sha256(
+        submission_path.read_bytes()
+    ).hexdigest()
+except (OSError, UnicodeDecodeError, ValueError, RecursionError) as exc:
+    reject(str(exc)[:256])
+
+top_level_fields = {
+    "schema_version", "probe_id", "probes_remaining", "submission_sha256",
+    "status", "valid", "gate_pass", "score", "metric", "budget",
+    "diagnostic_artifacts", "best_valid_snapshot", "task_feedback",
+}
+budget_fields = {
+    "measurement_probes_used", "measurement_probes_remaining",
+    "paid_probes_used", "paid_probes_remaining",
+    "estimated_flexcredit_used", "estimated_flexcredit_remaining",
+    "billed_flexcredit_used", "per_run_cap", "cumulative_cap",
+    "final_reserve", "budget_authority",
+}
+diagnostic_fields = {
+    "available", "location", "reason", "files", "score_authority",
+}
+feedback_fields = {
+    "schema_version", "task_slug", "feedback_kind", "blocking_stage",
+    "public_error_codes", "summary", "next_steps",
+}
+
+
+def nonnegative_integer(value):
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def nonnegative_number_or_none(value):
+    return value is None or (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+        and float(value) >= 0.0
+    )
+
+
+def nonnegative_number(value):
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+        and float(value) >= 0.0
+    )
+
+
+def finite_number_or_none(value):
+    return value is None or (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+    )
+
+
+nodes_seen = 0
+
+
+def validate_public_tree(value, depth=0):
+    global nodes_seen
+    nodes_seen += 1
+    if nodes_seen > 2048 or depth > 12:
+        reject("nested public data exceeds structural bounds")
+    if value is None or isinstance(value, bool):
+        return
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        try:
+            finite = math.isfinite(float(value))
+        except (OverflowError, ValueError):
+            finite = False
+        if not finite:
+            reject("nested public data contains a non-finite number")
+        return
+    if isinstance(value, str):
+        if len(value) > 4096:
+            reject("nested public data contains an oversized string")
+        return
+    if isinstance(value, list):
+        if len(value) > 256:
+            reject("nested public data contains an oversized array")
+        for item in value:
+            validate_public_tree(item, depth + 1)
+        return
+    if isinstance(value, dict):
+        if len(value) > 128:
+            reject("nested public data contains an oversized object")
+        for key, item in value.items():
+            if not isinstance(key, str) or len(key) > 128:
+                reject("nested public data contains an invalid object key")
+            validate_public_tree(item, depth + 1)
+        return
+    reject("nested public data contains an unsupported type")
+
+
+validate_public_tree(payload)
+if not isinstance(payload, dict) or set(payload) != top_level_fields:
+    reject("top-level fields do not match the 13-field schema")
+if payload["schema_version"] != 1:
+    reject("unsupported schema_version")
+if not nonnegative_integer(payload["probe_id"]) or payload["probe_id"] < 1:
+    reject("probe_id is not a positive integer")
+if not nonnegative_integer(payload["probes_remaining"]):
+    reject("probes_remaining is invalid")
+if (
+    not isinstance(payload["submission_sha256"], str)
+    or re.fullmatch(r"[0-9a-f]{64}", payload["submission_sha256"]) is None
+    or payload["submission_sha256"] != expected_submission_sha256
+):
+    reject("submission_sha256 does not match the submitted source")
+if payload["status"] != "completed":
+    reject("status is invalid")
+if any(not isinstance(payload[field], bool) for field in ("valid", "gate_pass")):
+    reject("valid or gate_pass is invalid")
+if payload["gate_pass"] and not payload["valid"]:
+    reject("gate_pass cannot be true for an invalid result")
+if not finite_number_or_none(payload["score"]) or not finite_number_or_none(payload["metric"]):
+    reject("score or metric is invalid")
+if not payload["gate_pass"] and payload["score"] is not None:
+    reject("a failed gate cannot publish an official score")
+
+budget = payload["budget"]
+if not isinstance(budget, dict) or set(budget) != budget_fields:
+    reject("budget fields are invalid")
+for field in (
+    "measurement_probes_used", "measurement_probes_remaining",
+    "paid_probes_used", "paid_probes_remaining",
+):
+    if not nonnegative_integer(budget[field]):
+        reject(f"budget.{field} is invalid")
+for field in (
+    "estimated_flexcredit_used", "estimated_flexcredit_remaining",
+    "per_run_cap", "cumulative_cap", "final_reserve",
+):
+    if not nonnegative_number(budget[field]):
+        reject(f"budget.{field} is invalid")
+if not nonnegative_number_or_none(budget["billed_flexcredit_used"]):
+    reject("budget.billed_flexcredit_used is invalid")
+if budget["budget_authority"] != "private_evaluator_sidecar":
+    reject("budget authority is invalid")
+if (
+    payload["probes_remaining"] != budget["measurement_probes_remaining"]
+    or payload["probe_id"] != budget["measurement_probes_used"]
+    or budget["paid_probes_used"] > budget["measurement_probes_used"]
+):
+    reject("probe counters are internally inconsistent")
+if not math.isclose(
+    float(budget["estimated_flexcredit_used"])
+    + float(budget["estimated_flexcredit_remaining"])
+    + float(budget["final_reserve"]),
+    float(budget["cumulative_cap"]),
+    rel_tol=0.0,
+    abs_tol=1.0e-12,
+):
+    reject("FlexCredit budget is internally inconsistent")
+diagnostic = payload["diagnostic_artifacts"]
+if not isinstance(diagnostic, dict) or set(diagnostic) != diagnostic_fields:
+    reject("diagnostic_artifacts fields are invalid")
+if (
+    diagnostic["available"] is not False
+    or diagnostic["location"] is not None
+    or not isinstance(diagnostic["reason"], str)
+    or not diagnostic["reason"]
+    or len(diagnostic["reason"]) > 160
+    or diagnostic["files"] != {}
+    or diagnostic["score_authority"] is not False
+):
+    reject("diagnostic_artifacts contract is invalid")
+snapshot = payload["best_valid_snapshot"]
+if snapshot is not None and (
+    not isinstance(snapshot, dict) or snapshot.get("score_authority") is not False
+):
+    reject("best_valid_snapshot authority is invalid")
+
+feedback = payload["task_feedback"]
+if not isinstance(feedback, dict) or set(feedback) != feedback_fields:
+    reject("task_feedback fields are invalid")
+if (
+    feedback["schema_version"] != 1
+    or feedback["task_slug"] != "anisotropic-swg-beamsplitter-v0"
+    or feedback["feedback_kind"] != "bounded_beamsplitter_diagnostics"
+    or not isinstance(feedback["blocking_stage"], str)
+    or not feedback["blocking_stage"]
+    or len(feedback["blocking_stage"]) > 160
+    or not isinstance(feedback["summary"], dict)
+):
+    reject("task_feedback identity or summary is invalid")
+for field in ("public_error_codes", "next_steps"):
+    values = feedback[field]
+    if (
+        not isinstance(values, list)
+        or len(values) > 8
+        or any(not isinstance(value, str) or len(value) > 512 for value in values)
+    ):
+        reject(f"task_feedback.{field} is invalid")
+
+# Preserve the exact validated canonical sidecar envelope.
+Path(destination).write_bytes(response_bytes)
+PY
+chmod 600 "$normalized"
+mv -- "$normalized" "$destination"
+probe_archive_dir=/workspace/.benchmark/probe-results
+probe_archive_destination="$probe_archive_dir/probe_results_${probe_id}.json"
+if [ -L "$probe_archive_dir" ] || { [ -e "$probe_archive_dir" ] && [ ! -d "$probe_archive_dir" ]; }; then
+    echo '{"error":"unsafe probe-result archive directory"}' >&2
+    exit 1
+fi
+mkdir -p -- "$probe_archive_dir"
+chmod 700 "$probe_archive_dir"
+probe_archive_temporary=$(mktemp "$probe_archive_dir/.probe-result.XXXXXX")
+cp -- "$destination" "$probe_archive_temporary"
+chmod 600 "$probe_archive_temporary"
+mv -- "$probe_archive_temporary" "$probe_archive_destination"
+rm -f -- "$temporary" "$submission_snapshot"
+trap - EXIT HUP INT TERM
+python3 -m json.tool "$destination"

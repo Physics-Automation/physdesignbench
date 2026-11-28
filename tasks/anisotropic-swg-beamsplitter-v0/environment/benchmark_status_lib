@@ -1,0 +1,71 @@
+#!/bin/sh
+# Shared learner-visible benchmark timing helpers.
+
+picbench_status_file_is_trusted() {
+    [ -d "$status_dir" ] &&
+        [ ! -L "$status_dir" ] &&
+        [ -f "$status_file" ] &&
+        [ ! -L "$status_file" ] &&
+        [ "$(stat -c '%u:%a' "$status_dir" 2>/dev/null || true)" = "0:555" ] &&
+        [ "$(stat -c '%u:%a' "$status_file" 2>/dev/null || true)" = "0:444" ] &&
+        jq -e '
+          .source == "harbor_agent_phase" and
+          (.timing | type == "object") and
+          (.timing.started_at_utc | type == "string") and
+          ((.timing.deadline_at_utc == null) or (.timing.deadline_at_utc | type == "string")) and
+          ((.timing.time_limit_seconds == null) or (.timing.time_limit_seconds | type == "number"))
+        ' "$status_file" >/dev/null 2>&1
+}
+
+picbench_existing_timing_value() {
+    key=$1
+    if [ -f "$status_file" ] && [ ! -L "$status_file" ]; then
+        jq -r ".timing.${key} // empty" "$status_file" 2>/dev/null || true
+    fi
+}
+
+picbench_timing_json() {
+    file_started=$(picbench_existing_timing_value started_at_utc)
+    file_deadline=$(picbench_existing_timing_value deadline_at_utc)
+    file_limit=$(picbench_existing_timing_value time_limit_seconds)
+    started=$file_started
+    deadline=$file_deadline
+    limit=$file_limit
+    now_iso=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    now_epoch=$(date -u +%s)
+    started_epoch=""
+    deadline_epoch=""
+    if [ -n "$started" ]; then
+        started_epoch=$(date -u -d "$started" +%s 2>/dev/null || true)
+    fi
+    if [ -n "$deadline" ]; then
+        deadline_epoch=$(date -u -d "$deadline" +%s 2>/dev/null || true)
+    fi
+    jq -n \
+      --arg now_iso "$now_iso" \
+      --arg started "$started" \
+      --arg deadline "$deadline" \
+      --arg limit "$limit" \
+      --argjson now_epoch "$now_epoch" \
+      --arg started_epoch "$started_epoch" \
+      --arg deadline_epoch "$deadline_epoch" \
+      '
+      def maybe_num($v):
+        if $v == "" then null
+        else try ($v | tonumber) catch null
+        end;
+      {
+        generated_at: $now_iso,
+        started_at_utc: (if $started == "" then null else $started end),
+        deadline_at_utc: (if $deadline == "" then null else $deadline end),
+        time_limit_seconds: maybe_num($limit),
+        elapsed_seconds: (
+          maybe_num($started_epoch) as $start
+          | if $start == null then null else ([0, $now_epoch - $start] | max) end
+        ),
+        remaining_seconds: (
+          maybe_num($deadline_epoch) as $end
+          | if $end == null then null else ([0, $end - $now_epoch] | max) end
+        )
+      }'
+}

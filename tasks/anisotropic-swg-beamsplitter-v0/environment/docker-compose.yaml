@@ -1,0 +1,51 @@
+services:
+  main:
+    environment:
+      SIMCLOUD_APIKEY: agenticpic-layout-token
+      TIDY3D_WEB__API_ENDPOINT: http://evaluator:8787
+      AGENTICPIC_LAYOUT_PROXY_ENDPOINT: http://evaluator:8787
+      PICBENCH_PROBE_ENDPOINT: http://evaluator:8788/v1/probe
+      BENCHMARK_STARTED_AT_UTC: ${BENCHMARK_STARTED_AT_UTC:-}
+      BENCHMARK_DEADLINE_AT_UTC: ${BENCHMARK_DEADLINE_AT_UTC:-}
+      BENCHMARK_TIME_LIMIT_SECONDS: ${BENCHMARK_TIME_LIMIT_SECONDS:-}
+
+  evaluator:
+    image: ${PICBENCH_ANISOTROPIC_SWG_BEAMSPLITTER_EVALUATOR_IMAGE:-docker.io/physicsautomation/physdesignbench:anisotropic-swg-beamsplitter-v0-evaluator-dev}
+    command: ["/opt/picbench/evaluator/bin/probe-service"]
+    restart: "no"
+    read_only: true
+    init: true
+    cpus: 4.0
+    mem_limit: 8192m
+    expose:
+      - "8787"
+      - "8788"
+    environment:
+      TIDY3D_API_KEY: ${TIDY3D_API_KEY:-}
+      SIMCLOUD_APIKEY: ${SIMCLOUD_APIKEY:-}
+      PICBENCH_PROBE_BUDGET: ${PICBENCH_PROBE_BUDGET:-30}
+      PICBENCH_MAX_PAID_LEARNER_PROBES: ${PICBENCH_MAX_PAID_LEARNER_PROBES:-30}
+      PICBENCH_CUMULATIVE_THERMAL_LIMIT_FLEXCREDIT: ${PICBENCH_CUMULATIVE_THERMAL_LIMIT_FLEXCREDIT:-100}
+      PICBENCH_EVALUATOR_IMAGE: ${PICBENCH_ANISOTROPIC_SWG_BEAMSPLITTER_EVALUATOR_IMAGE:-docker.io/physicsautomation/physdesignbench:anisotropic-swg-beamsplitter-v0-evaluator-dev}
+      PICBENCH_EVALUATOR_IMAGE_DIGEST: ${PICBENCH_ANISOTROPIC_SWG_BEAMSPLITTER_EVALUATOR_IMAGE_DIGEST:-}
+      PICBENCH_ALLOW_MUTABLE_IMAGES: ${PICBENCH_ALLOW_MUTABLE_IMAGES:-0}
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    tmpfs:
+      - /experiment:rw,noexec,nosuid,nodev,mode=0700,size=1g
+      - /logs:rw,noexec,nosuid,nodev,mode=0700,size=128m
+      - /submission:rw,noexec,nosuid,nodev,mode=0700,size=2m
+      - /tmp:rw,noexec,nosuid,nodev,mode=1777,size=512m
+      - /var/lib/picbench:rw,noexec,nosuid,nodev,mode=0700,size=16m
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, KILL, SETGID, SETUID]
+    security_opt:
+      - no-new-privileges:true
+      - seccomp=${CONTEXT_DIR:-.}/restricted-builder-outer-seccomp.json
+    pids_limit: 128
+    healthcheck:
+      test: ["CMD", "/opt/picbench/evaluator/bin/probe-healthcheck"]
+      interval: 2s
+      timeout: 2s
+      retries: 3
+      start_period: 50s

@@ -1,0 +1,443 @@
+#!/usr/bin/env python3
+"""Canonical two-image evaluator for one frozen anisotropic-SWG design.py."""
+
+from __future__ import annotations
+
+import ctypes
+import hashlib
+import importlib
+import json
+import os
+import re
+import shutil
+import signal
+import socket
+import stat
+import struct
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import Any
+
+RUNTIME = Path("/opt/picbench/evaluator/runtime")
+BUILDER = Path("/opt/picbench/evaluator/builder/restricted_builder.py")
+PROFILE = RUNTIME / "task_profile.json"
+WORKER = RUNTIME / "fdtd_worker.py"
+PROXY = RUNTIME / "layout_license_proxy.py"
+EXPERIMENT = Path("/experiment")
+FROZEN = EXPERIMENT / "learner.py"
+BUILDER_OUTPUT = EXPERIMENT / "builder_output"
+VERIFIER = Path("/logs/verifier")
+ARTIFACTS = Path("/logs/artifacts")
+MAX_SUBMISSION_BYTES = 1024 * 1024
+MAX_IPC_BYTES = 4 * 1024 * 1024
+BUILDER_TIMEOUT_SECONDS = 60
+FDTD_RESPONSE_TIMEOUT_SECONDS = 1350
+EXECUTION_UID = 62001
+EXECUTION_GID = 62001
+PINNED_IMAGE_RE = re.compile(r"^[^@\s]+@(?P<digest>sha256:[0-9a-f]{64})$")
+
+
+class EvaluationError(RuntimeError):
+    """The credential-stage launcher could not proceed safely."""
+
+
+def _load_trusted_runtime() -> None:
+    """Load native GDS/scoring code only after provider keys are scrubbed."""
+    sys.path.insert(0, str(RUNTIME))
+    module = importlib.import_module("evaluator")
+    globals().update(
+        atomic_json=module.atomic_json,
+        load_profile=module.load_profile,
+        publish_failure=module.publish_failure,
+        publish_success=module.publish_success,
+        validate_gds=module.validate_gds,
+    )
+
+
+def _require_image_identity() -> None:
+    image = os.environ.get("PICBENCH_EVALUATOR_IMAGE", "").strip()
+    override = os.environ.get("PICBENCH_ALLOW_MUTABLE_IMAGES", "0").strip().lower()
+    if override not in {"0", "1", "false", "true", "no", "yes"}:
+        raise EvaluationError("PICBENCH_ALLOW_MUTABLE_IMAGES has an invalid value")
+    match = PINNED_IMAGE_RE.fullmatch(image)
+    if match is None and override not in {"1", "true", "yes"}:
+        raise EvaluationError(
+            "final evaluation requires an evaluator image pinned by sha256 digest; "
+            "set PICBENCH_ALLOW_MUTABLE_IMAGES=1 only for local development"
+        )
+    if match is not None:
+        resolved = match.group("digest")
+        supplied = os.environ.get("PICBENCH_EVALUATOR_IMAGE_DIGEST", "").strip()
+        if supplied and supplied != resolved:
+            raise EvaluationError("evaluator image digest metadata does not match its image reference")
+        os.environ["PICBENCH_EVALUATOR_IMAGE_DIGEST"] = resolved
+
+
+def _prepare_directories() -> None:
+    for path in (EXPERIMENT, VERIFIER, ARTIFACTS):
+        path.mkdir(parents=True, exist_ok=True)
+        for child in list(path.iterdir()):
+            if child.is_dir() and not child.is_symlink():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
+        path.chmod(0o711 if path == EXPERIMENT else 0o700)
+    BUILDER_OUTPUT.mkdir(mode=0o700)
+    os.chown(BUILDER_OUTPUT, EXECUTION_UID, EXECUTION_GID)
+
+
+def _clear_published_outputs() -> None:
+    """Remove any partial generation before publishing a failure transaction."""
+    for path in (VERIFIER, ARTIFACTS):
+        path.mkdir(parents=True, exist_ok=True)
+        for child in list(path.iterdir()):
+            if child.is_dir() and not child.is_symlink():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
+        path.chmod(0o700)
+
+
+def _read_submission(path: Path) -> bytes:
+    flags = os.O_RDONLY | os.O_CLOEXEC | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(path, flags)
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode) or before.st_size <= 0:
+            raise EvaluationError("submission must be a non-empty regular file")
+        if before.st_size > MAX_SUBMISSION_BYTES:
+            raise EvaluationError("submission exceeds the 1 MiB source limit")
+        payload = b""
+        while len(payload) <= MAX_SUBMISSION_BYTES:
+            block = os.read(descriptor, min(64 * 1024, MAX_SUBMISSION_BYTES + 1 - len(payload)))
+            if not block:
+                break
+            payload += block
+        after = os.fstat(descriptor)
+        fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+        if any(getattr(before, name) != getattr(after, name) for name in fields):
+            raise EvaluationError("submission changed while it was frozen")
+        if len(payload) != before.st_size or len(payload) > MAX_SUBMISSION_BYTES:
+            raise EvaluationError("submission size changed or exceeded the source limit")
+        return payload
+    finally:
+        os.close(descriptor)
+
+
+def _freeze(path: Path) -> str:
+    payload = _read_submission(path)
+    FROZEN.write_bytes(payload)
+    FROZEN.chmod(0o444)
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _start_worker() -> tuple[subprocess.Popen[bytes], socket.socket]:
+    parent, child = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
+    child.set_inheritable(True)
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    if env.get("TIDY3D_API_KEY") and not env.get("SIMCLOUD_APIKEY"):
+        env["SIMCLOUD_APIKEY"] = env["TIDY3D_API_KEY"]
+    if env.get("SIMCLOUD_APIKEY") and not env.get("TIDY3D_API_KEY"):
+        env["TIDY3D_API_KEY"] = env["SIMCLOUD_APIKEY"]
+    process = subprocess.Popen(
+        [sys.executable, str(WORKER), "--fd", str(child.fileno())],
+        env=env,
+        pass_fds=(child.fileno(),),
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    child.close()
+    return process, parent
+
+
+def _scrub_credentials() -> None:
+    for name in ("TIDY3D_API_KEY", "SIMCLOUD_APIKEY"):
+        os.environ.pop(name, None)
+
+
+def _port_open(port: int) -> bool:
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=0.2):
+            return True
+    except OSError:
+        return False
+
+
+def _start_layout_proxy(credential_env: dict[str, str]) -> subprocess.Popen[bytes] | None:
+    if _port_open(8787):
+        return None
+    process = subprocess.Popen(
+        [sys.executable, str(PROXY), "--host", "127.0.0.1", "--port", "8787"],
+        env=credential_env,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    for _ in range(100):
+        if process.poll() is not None:
+            error = (process.stderr.read() if process.stderr else b"").decode("utf-8", "replace")
+            raise EvaluationError(f"layout proxy failed to start: {error[-1000:]}")
+        if _port_open(8787):
+            return process
+        time.sleep(0.05)
+    process.terminate()
+    raise EvaluationError("layout proxy startup timed out")
+
+
+def _drop_to_builder_user() -> None:
+    os.setgroups([])
+    os.setgid(EXECUTION_GID)
+    os.setuid(EXECUTION_UID)
+
+
+def _public_builder_error(stderr: bytes) -> str:
+    lines = [line.strip() for line in stderr.decode("utf-8", "replace").splitlines() if line.strip()]
+    message = lines[-1] if lines else "restricted builder returned no diagnostic"
+    for private_path in (
+        str(RUNTIME),
+        str(BUILDER.parent),
+        str(EXPERIMENT),
+        "/usr/local/lib/python3.12/site-packages",
+    ):
+        message = message.replace(private_path, "[private]")
+    return message[:800]
+
+
+def _run_builder() -> Path:
+    env = {
+        "HOME": str(BUILDER_OUTPUT),
+        "PATH": "/usr/local/bin:/usr/bin:/bin",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONUNBUFFERED": "1",
+        "MPLBACKEND": "Agg",
+        # PhotonForge imports NumPy before the inner sandbox is entered.
+        # Keep native math runtimes single-threaded: Linux rejects
+        # CLONE_NEWUSER from a multithreaded process with EINVAL.
+        "OPENBLAS_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "SIMCLOUD_APIKEY": "agenticpic-layout-token",
+        "TIDY3D_API_KEY": "agenticpic-layout-token",
+        "TIDY3D_WEB__API_ENDPOINT": "http://127.0.0.1:8787",
+        "AGENTICPIC_LAYOUT_PROXY_ENDPOINT": "http://127.0.0.1:8787",
+        "PICBENCH_EXPECTED_LEARNER_UID": str(EXECUTION_UID),
+        "PICBENCH_EXPECTED_LEARNER_GID": str(EXECUTION_GID),
+    }
+    completed = subprocess.run(
+        [sys.executable, str(BUILDER), str(FROZEN), str(BUILDER_OUTPUT)],
+        cwd=BUILDER_OUTPUT,
+        env=env,
+        preexec_fn=_drop_to_builder_user,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=BUILDER_TIMEOUT_SECONDS,
+        check=False,
+    )
+    if completed.returncode != 0:
+        error = _public_builder_error(completed.stderr)
+        raise EvaluationError(f"restricted component build failed: {error}")
+    gds_path = BUILDER_OUTPUT / "final_pic.gds"
+    if not gds_path.is_file() or gds_path.is_symlink():
+        raise EvaluationError("restricted builder returned no canonical GDS")
+    return gds_path
+
+
+def _send(sock: socket.socket, payload: dict[str, Any]) -> None:
+    body = json.dumps(payload, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    if not 0 < len(body) <= MAX_IPC_BYTES:
+        raise EvaluationError("trusted geometry IPC payload is invalid")
+    sock.sendall(struct.pack("!I", len(body)) + body)
+
+
+def _receive(sock: socket.socket) -> dict[str, Any]:
+    sock.settimeout(FDTD_RESPONSE_TIMEOUT_SECONDS)
+    header = sock.recv(4, socket.MSG_WAITALL)
+    if len(header) != 4:
+        raise EvaluationError("FDTD worker returned no response")
+    length = struct.unpack("!I", header)[0]
+    if not 0 < length <= MAX_IPC_BYTES:
+        raise EvaluationError("FDTD worker response exceeded the IPC limit")
+    body = sock.recv(length, socket.MSG_WAITALL)
+    if len(body) != length:
+        raise EvaluationError("FDTD worker response was truncated")
+    payload = json.loads(body)
+    if not isinstance(payload, dict):
+        raise EvaluationError("FDTD worker response was invalid")
+    return payload
+
+
+def _stop(process: subprocess.Popen[bytes] | None) -> None:
+    if process is None or process.poll() is not None:
+        return
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+
+
+def _local_atomic_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    temporary.write_text(
+        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+    temporary.chmod(0o600)
+    os.replace(temporary, path)
+
+
+def _local_file_record(path: Path) -> dict[str, Any]:
+    return {"size": path.stat().st_size, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+
+
+def _publish_failure_transaction(
+    error: str,
+    submission_sha256: str,
+    *,
+    design_valid: bool,
+    evaluation_mode: str,
+    probe_id: int | None,
+) -> None:
+    _clear_published_outputs()
+    ARTIFACTS.mkdir(parents=True, exist_ok=True)
+    VERIFIER.mkdir(parents=True, exist_ok=True)
+    submission_size = FROZEN.stat().st_size if FROZEN.is_file() else 0
+    if "publish_failure" not in globals():
+        _load_trusted_runtime()
+    publish_failure(
+        output_dir=ARTIFACTS,
+        artifact_dir=ARTIFACTS / "plots",
+        verifier_dir=VERIFIER,
+        error=error,
+        submission_sha256=submission_sha256,
+        submission_size=submission_size,
+        profile_path=PROFILE,
+        design_valid=design_valid,
+        evaluation_mode=evaluation_mode,
+        probe_id=probe_id,
+    )
+
+
+def main() -> int:
+    if os.geteuid() != 0:
+        print("canonical evaluation must run as root", file=sys.stderr)
+        return 77
+    if ctypes.CDLL(None, use_errno=True).prctl(4, 0, 0, 0, 0) != 0:
+        print("could not protect credential-stage evaluator memory", file=sys.stderr)
+        return 77
+    submission = Path(sys.argv[1] if len(sys.argv) == 2 else "/submission/design.py")
+    submission_sha256 = ""
+    evaluation_mode = "final"
+    probe_id: int | None = None
+    worker: subprocess.Popen[bytes] | None = None
+    worker_socket: socket.socket | None = None
+    proxy: subprocess.Popen[bytes] | None = None
+    design_valid = False
+    try:
+        _prepare_directories()
+        _require_image_identity()
+        requested_mode = os.environ.get("PICBENCH_EVALUATION_MODE", "final").strip().lower()
+        if requested_mode not in {"final", "probe"}:
+            raise EvaluationError("PICBENCH_EVALUATION_MODE must be final or probe")
+        raw_probe_id = os.environ.get("PICBENCH_PROBE_ID", "").strip()
+        if requested_mode == "probe":
+            if not raw_probe_id.isdecimal() or int(raw_probe_id) < 1:
+                raise EvaluationError("probe evaluation requires PICBENCH_PROBE_ID")
+            evaluation_mode = "probe"
+            probe_id = int(raw_probe_id)
+        elif raw_probe_id:
+            raise EvaluationError("final evaluation cannot carry PICBENCH_PROBE_ID")
+        submission_sha256 = _freeze(submission)
+        os.environ["PICBENCH_SUBMISSION_SHA256"] = submission_sha256
+        credential_env = os.environ.copy()
+        if credential_env.get("TIDY3D_API_KEY") and not credential_env.get("SIMCLOUD_APIKEY"):
+            credential_env["SIMCLOUD_APIKEY"] = credential_env["TIDY3D_API_KEY"]
+        if credential_env.get("SIMCLOUD_APIKEY") and not credential_env.get("TIDY3D_API_KEY"):
+            credential_env["TIDY3D_API_KEY"] = credential_env["SIMCLOUD_APIKEY"]
+        worker, worker_socket = _start_worker()
+        proxy = _start_layout_proxy(credential_env)
+        _scrub_credentials()
+        credential_env.clear()
+        _load_trusted_runtime()
+        gds_path = _run_builder()
+        _stop(proxy)
+        proxy = None
+        profile = load_profile(PROFILE)
+        geometry = validate_gds(gds_path, profile)
+        design_valid = True
+        shutil.copy2(gds_path, ARTIFACTS / "final_pic.gds")
+        _send(
+            worker_socket,
+            {
+                "schema_version": 1,
+                "device_length_um": geometry["device_length_um"],
+                "polygons": [
+                    {"layer": polygon["layer"], "points_um": polygon["points_um"]}
+                    for polygon in geometry["polygons"]
+                ],
+            },
+        )
+        response = _receive(worker_socket)
+        if response.get("ok") is not True or not isinstance(response.get("result"), dict):
+            raise EvaluationError(f"trusted FDTD failed: {str(response.get('error', 'unknown error'))[:1800]}")
+        worker_socket.close()
+        worker_socket = None
+        worker.wait(timeout=10)
+        payload = publish_success(
+            output_dir=ARTIFACTS,
+            artifact_dir=ARTIFACTS / "plots",
+            verifier_dir=VERIFIER,
+            submission_sha256=submission_sha256,
+            submission_size=FROZEN.stat().st_size,
+            profile_path=PROFILE,
+            geometry_manifest=geometry,
+            fdtd_result=response["result"],
+            evaluation_mode=evaluation_mode,
+            probe_id=probe_id,
+        )
+        atomic_json(EXPERIMENT / "eval.json", payload)
+        print(
+            json.dumps(
+                {
+                    "status": payload["status"],
+                    "official_score": payload["official_score"],
+                    "paper_margin": payload["paper_margin"],
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
+    except Exception as exc:
+        _scrub_credentials()
+        error = f"{type(exc).__name__}: {exc}"
+        _publish_failure_transaction(
+            error,
+            submission_sha256,
+            design_valid=design_valid,
+            evaluation_mode=evaluation_mode,
+            probe_id=probe_id,
+        )
+        print(f"evaluation failed: {error}", file=sys.stderr)
+        return 1
+    finally:
+        _stop(proxy)
+        if worker_socket is not None:
+            worker_socket.close()
+        _stop(worker)
+
+
+if __name__ == "__main__":
+    def _interrupt(_signum: int, _frame: Any) -> None:
+        raise InterruptedError("canonical evaluation interrupted")
+
+    signal.signal(signal.SIGTERM, _interrupt)
+    signal.signal(signal.SIGINT, _interrupt)
+    raise SystemExit(main())

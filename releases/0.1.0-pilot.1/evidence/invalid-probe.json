@@ -1,0 +1,54 @@
+{
+    "best_valid_snapshot": null,
+    "budget": {
+        "billed_flexcredit_used": null,
+        "budget_authority": "private_evaluator_sidecar",
+        "cumulative_cap": 100.0,
+        "estimated_flexcredit_remaining": 96.0,
+        "estimated_flexcredit_used": 0.0,
+        "final_reserve": 4.0,
+        "measurement_probes_remaining": 29,
+        "measurement_probes_used": 1,
+        "paid_probes_remaining": 30,
+        "paid_probes_used": 0,
+        "per_run_cap": 4.0
+    },
+    "diagnostic_artifacts": {
+        "available": false,
+        "files": {},
+        "location": null,
+        "reason": "not_exposed_by_this_task",
+        "score_authority": false
+    },
+    "gate_pass": false,
+    "metric": null,
+    "probe_id": 1,
+    "probes_remaining": 29,
+    "schema_version": 1,
+    "score": null,
+    "status": "completed",
+    "submission_sha256": "80c0ff5881a157df32ae89077da647a29fe4aaefef947608de95de9488e639c2",
+    "task_feedback": {
+        "blocking_stage": "public_geometry_contract",
+        "feedback_kind": "bounded_beamsplitter_diagnostics",
+        "next_steps": [
+            "Review the public mask, landing, and mirror-symmetry contract before probing again."
+        ],
+        "public_error_codes": [
+            "geometry_contract_failed"
+        ],
+        "schema_version": 1,
+        "summary": {
+            "design_valid": false,
+            "evidence_valid": false,
+            "gate_pass": false,
+            "reference_baseline": 1.0,
+            "score_eligible": false,
+            "simulation_valid": false,
+            "status": "evaluation_error",
+            "valid": false
+        },
+        "task_slug": "anisotropic-swg-beamsplitter-v0"
+    },
+    "valid": false
+}

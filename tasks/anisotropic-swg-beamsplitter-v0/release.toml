@@ -1,0 +1,26 @@
+[release]
+platform = "linux/amd64"
+public_evaluator_reviewed = true
+
+[images.learner]
+input_hash_kind = "learner"
+input_hash_label = "org.picbench.learner-build-inputs-sha256"
+context = "environment"
+dockerfile = "environment/Dockerfile"
+config_paths = ["environment.docker_image"]
+compose_services = ["main"]
+image_variable = "PICBENCH_ANISOTROPIC_SWG_BEAMSPLITTER_LEARNER_IMAGE"
+forbidden_paths = ["opt/picbench/evaluator", "solution", "workspace/solution", "root/.trusted_runtime_env"]
+smoke_commands = [["python", "-c", "import gdstk,tidy3d,scipy,importlib.util; assert importlib.util.find_spec('photonforge'); print('Offline imports and PhotonForge package discovery passed')"], ["test", "-x", "/usr/local/bin/run_probe"]]
+
+[images.evaluator]
+input_hash_kind = "evaluator"
+input_hash_label = "org.picbench.evaluator-build-inputs-sha256"
+context = "."
+dockerfile = "evaluator/Dockerfile"
+config_paths = ["verifier.environment.docker_image"]
+compose_services = ["evaluator"]
+image_variable = "PICBENCH_ANISOTROPIC_SWG_BEAMSPLITTER_EVALUATOR_IMAGE"
+digest_variable = "PICBENCH_ANISOTROPIC_SWG_BEAMSPLITTER_EVALUATOR_IMAGE_DIGEST"
+forbidden_paths = ["solution", "workspace/design.py", "root/.trusted_runtime_env"]
+smoke_commands = [["python", "-c", "import gdstk,tidy3d,scipy,importlib.util; assert importlib.util.find_spec('photonforge'); print('Offline imports and PhotonForge package discovery passed')"], ["test", "-x", "/opt/picbench/evaluator/bin/evaluate"], ["test", "-x", "/tests/test.sh"]]

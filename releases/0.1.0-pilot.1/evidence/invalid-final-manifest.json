@@ -1,0 +1,27 @@
+{
+  "artifacts": {
+    "eval.json": {
+      "sha256": "8836566ce220ec6d542b908130a2332eb5b48d76004d88ddfb20e18fc73088d1",
+      "size": 1849
+    },
+    "traces.json": {
+      "sha256": "8836566ce220ec6d542b908130a2332eb5b48d76004d88ddfb20e18fc73088d1",
+      "size": 1849
+    }
+  },
+  "complete": true,
+  "evaluation_id": "anisotropic-swg-final-38a4b85802673c28",
+  "evaluator_image": "docker.io/physicsautomation/physdesignbench@sha256:bf35b3e02b80b6f639a561865230baae369d005ebaa8866dec5b3b947dca8c66",
+  "evaluator_image_digest": "sha256:bf35b3e02b80b6f639a561865230baae369d005ebaa8866dec5b3b947dca8c66",
+  "evaluator_returncode": 1,
+  "mode": "final",
+  "probe_id": null,
+  "profile_sha256": "60d7a0864ebcafb1b050a594342218710feabb03cb2281167744848b6783ec89",
+  "schema_version": 1,
+  "submission": {
+    "sha256": "38a4b85802673c284801c5379681d7252283f3e0e27ddb7e4a1b9c76fc49dd17",
+    "size": 44
+  },
+  "task_id": "AnisotropicSWGBeamsplitterImplementationOptimization",
+  "task_slug": "anisotropic-swg-beamsplitter-v0"
+}

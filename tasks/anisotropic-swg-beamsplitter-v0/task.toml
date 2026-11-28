@@ -1,0 +1,122 @@
+schema_version = "1.3"
+artifacts = [
+  "/submission/design.py",
+  { source = "/workspace/.benchmark/probe-results", destination = "workspace", service = "main" },
+  { source = "/var/lib/picbench/anisotropic-swg-beamsplitter-v0/state/probe_history.json", service = "evaluator" },
+  { source = "/var/lib/picbench/anisotropic-swg-beamsplitter-v0/state/probe_state.json", service = "evaluator" },
+  { source = "/var/lib/picbench/anisotropic-swg-beamsplitter-v0/state/paid_usage_receipt.json", service = "evaluator" },
+]
+
+[task]
+name = "physics-automation/anisotropic-swg-beamsplitter-v0"
+description = "Implement the Halir anisotropic-SWG silicon 2 x 2 MMI beamsplitter as strictly y-mirror-symmetric masks and minimize its worst-band normalized loss, balance, and phase penalty over the paper's simulated 1250-1750 nm band on a 10 nm grid."
+keywords = ["photonics", "implementation-optimization", "beamsplitter", "mmi", "silicon", "swg", "anisotropic", "photonforge", "tidy3d", "gds"]
+[[task.authors]]
+name = "PhysDesignBench contributors"
+email = "ali.momeni@epfl.ch"
+
+[metadata]
+author_name = "PhysDesignBench contributors"
+author_email = "ali.momeni@epfl.ch"
+difficulty = "medium"
+category = "scientific-computing"
+tags = ["photonics", "implementation-optimization", "beamsplitter", "mmi", "silicon", "swg", "anisotropic", "tidy3d", "photonforge", "gds"]
+expert_time_estimate_min = 180.0
+junior_time_estimate_min = 720.0
+device = "AnisotropicSWGBeamsplitter"
+arena = "harbor"
+task_mode = "implementation_optimization"
+official_score = "J"
+official_score_direction = "lower_is_better"
+
+[verifier]
+timeout_sec = 1800.0
+user = "root"
+environment_mode = "separate"
+publish_artifacts = true
+
+[[verifier.collect]]
+command = "/usr/local/sbin/export_anisotropic_swg_beamsplitter_submission"
+service = "main"
+timeout_sec = 30.0
+user = "root"
+
+[verifier.environment]
+build_timeout_sec = 1200.0
+docker_image = "${PICBENCH_ANISOTROPIC_SWG_BEAMSPLITTER_EVALUATOR_IMAGE:-docker.io/physicsautomation/physdesignbench:anisotropic-swg-beamsplitter-v0-evaluator-dev}"
+docker_seccomp_profile = "../environment/restricted-builder-outer-seccomp.json"
+docker_no_new_privileges = true
+docker_read_only = true
+docker_init = true
+upload_environment_dir = false
+docker_cap_drop = ["ALL"]
+docker_cap_add = [
+  "CHOWN",
+  "DAC_OVERRIDE",
+  "FOWNER",
+  "KILL",
+  "SETGID",
+  "SETUID",
+]
+docker_pids_limit = 128
+docker_tmpfs = [
+  "/workspace:rw,noexec,nosuid,nodev,mode=0700,size=32m",
+  "/experiment:rw,noexec,nosuid,nodev,mode=0700,size=1g",
+  "/logs:rw,noexec,nosuid,nodev,mode=0700,size=128m",
+  "/submission:rw,noexec,nosuid,nodev,mode=0700,size=2m",
+  "/tmp:rw,noexec,nosuid,nodev,mode=1777,size=512m",
+  "/var/lib/picbench:rw,noexec,nosuid,nodev,mode=0700,size=16m",
+]
+cpus = 4
+memory_mb = 8192
+storage_mb = 10240
+gpus = 0
+network_mode = "public"
+mcp_servers = []
+
+[verifier.environment.env]
+TIDY3D_API_KEY = "${TIDY3D_API_KEY:-}"
+SIMCLOUD_APIKEY = "${SIMCLOUD_APIKEY:-}"
+PICBENCH_EVALUATOR_IMAGE = "${PICBENCH_ANISOTROPIC_SWG_BEAMSPLITTER_EVALUATOR_IMAGE:-docker.io/physicsautomation/physdesignbench:anisotropic-swg-beamsplitter-v0-evaluator-dev}"
+PICBENCH_EVALUATOR_IMAGE_DIGEST = "${PICBENCH_ANISOTROPIC_SWG_BEAMSPLITTER_EVALUATOR_IMAGE_DIGEST:-}"
+PICBENCH_ALLOW_MUTABLE_IMAGES = "${PICBENCH_ALLOW_MUTABLE_IMAGES:-0}"
+
+[agent]
+timeout_sec = 7200.0
+user = "agent"
+
+[environment]
+build_timeout_sec = 1200.0
+docker_image = "${PICBENCH_ANISOTROPIC_SWG_BEAMSPLITTER_LEARNER_IMAGE:-docker.io/physicsautomation/physdesignbench:anisotropic-swg-beamsplitter-v0-learner-dev}"
+cpus = 4
+memory_mb = 8192
+storage_mb = 10240
+gpus = 0
+network_mode = "public"
+mcp_servers = []
+
+[verifier.env]
+
+[environment.healthcheck]
+command = "python3 -c 'from urllib.request import urlopen; response = urlopen(\"http://evaluator:8788/healthz\", timeout=1); raise SystemExit(response.status != 200)'"
+interval_sec = 2.0
+timeout_sec = 2.0
+start_period_sec = 50.0
+start_interval_sec = 2.0
+retries = 3
+
+[environment.env]
+PICBENCH_PROBE_BUDGET = "${PICBENCH_PROBE_BUDGET:-30}"
+PICBENCH_MAX_PAID_LEARNER_PROBES = "${PICBENCH_MAX_PAID_LEARNER_PROBES:-30}"
+PICBENCH_CUMULATIVE_THERMAL_LIMIT_FLEXCREDIT = "${PICBENCH_CUMULATIVE_THERMAL_LIMIT_FLEXCREDIT:-100}"
+BENCHMARK_STARTED_AT_UTC = "${BENCHMARK_STARTED_AT_UTC:-}"
+BENCHMARK_DEADLINE_AT_UTC = "${BENCHMARK_DEADLINE_AT_UTC:-}"
+BENCHMARK_TIME_LIMIT_SECONDS = "${BENCHMARK_TIME_LIMIT_SECONDS:-}"
+TIDY3D_WEB__API_ENDPOINT = "http://evaluator:8787"
+AGENTICPIC_LAYOUT_PROXY_ENDPOINT = "http://evaluator:8787"
+PICBENCH_PROBE_ENDPOINT = "http://evaluator:8788/v1/probe"
+PICBENCH_ANISOTROPIC_SWG_BEAMSPLITTER_EVALUATOR_IMAGE = "${PICBENCH_ANISOTROPIC_SWG_BEAMSPLITTER_EVALUATOR_IMAGE:-docker.io/physicsautomation/physdesignbench:anisotropic-swg-beamsplitter-v0-evaluator-dev}"
+
+[solution.env]
+TIDY3D_API_KEY = ""
+SIMCLOUD_APIKEY = ""

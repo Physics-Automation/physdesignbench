@@ -27,6 +27,13 @@ For task specifications, design examples, and results, see the [website](https:/
 
 See the [run guide](https://physdesignbench.com/run) for environment setup and execution instructions.
 
+## Single-task image pilot
+
+The anisotropic SWG beamsplitter Reimplementation task is the first Docker/Harbor
+distribution pilot. See the [release guide](docs/releasing.md) and
+[task/image audit](docs/releases/pilot-audit.md). The other tasks are being ported;
+this is not yet a complete Harbor dataset release.
+
 ## Contributing
 
 We welcome new design problems, expert reviews, and evaluations of additional agents.
